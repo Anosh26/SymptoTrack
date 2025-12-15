@@ -2,16 +2,17 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
-    Alert,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    TextInput,
-    TouchableOpacity,
-    useColorScheme,
-    View,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  TextInput,
+  TouchableOpacity,
+  useColorScheme,
+  View
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -49,104 +50,120 @@ export default function LoginScreen() {
   };
 
   return (
-    <ThemedView style={styles.container}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={{ flex: 1 }}>
-        <ScrollView contentContainerStyle={styles.scrollContainer}>
-          
-          {/* Header Section */}
-          <View style={styles.header}>
-            <Ionicons name="medical" size={64} color="#0a7ea4" style={{ marginBottom: 20 }} />
-            <ThemedText type="title">{isSignUp ? 'Create Account' : 'Welcome Back'}</ThemedText>
-            <ThemedText style={styles.subtitle}>
-              {isSignUp ? 'Sign up to start tracking your symptoms' : 'Log in to continue your health journey'}
-            </ThemedText>
-          </View>
-
-          {/* Form Section */}
-          <View style={styles.formContainer}>
-            <View style={[styles.inputContainer, { backgroundColor: inputBgColor, borderColor }]}>
-              <Ionicons name="mail-outline" size={20} color={placeholderColor} style={styles.inputIcon} />
-              <TextInput
-                style={[styles.input, { color: textColor }]}
-                placeholder="Email Address"
-                placeholderTextColor={placeholderColor}
-                value={email}
-                onChangeText={setEmail}
-                keyboardType="email-address"
-                autoCapitalize="none"
-              />
-            </View>
-
-            <View style={[styles.inputContainer, { backgroundColor: inputBgColor, borderColor }]}>
-              <Ionicons name="lock-closed-outline" size={20} color={placeholderColor} style={styles.inputIcon} />
-              <TextInput
-                style={[styles.input, { color: textColor }]}
-                placeholder="Password"
-                placeholderTextColor={placeholderColor}
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry
-              />
-            </View>
-
-            <TouchableOpacity style={styles.primaryButton} onPress={handleEmailLogin}>
-              <ThemedText style={styles.primaryButtonText}>
-                {isSignUp ? 'Sign Up' : 'Log In'}
+    <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
+      <ThemedView style={styles.container}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.keyboardView}>
+          <ScrollView 
+            contentContainerStyle={styles.scrollContainer}
+            showsVerticalScrollIndicator={false}>
+            
+            {/* Header Section */}
+            <View style={styles.header}>
+              <Ionicons name="medical" size={64} color="#0a7ea4" style={{ marginBottom: 20 }} />
+              <ThemedText type="title" style={styles.title}>
+                {isSignUp ? 'Create Account' : 'Welcome Back'}
               </ThemedText>
-            </TouchableOpacity>
-
-            <View style={styles.dividerContainer}>
-              <View style={[styles.dividerLine, { backgroundColor: borderColor }]} />
-              <ThemedText style={styles.dividerText}>or continue with</ThemedText>
-              <View style={[styles.dividerLine, { backgroundColor: borderColor }]} />
+              <ThemedText style={styles.subtitle}>
+                {isSignUp ? 'Sign up to start tracking your symptoms' : 'Log in to continue your health journey'}
+              </ThemedText>
             </View>
 
-            {/* Social Login Buttons */}
-            <View style={styles.socialContainer}>
-              <TouchableOpacity 
-                style={[styles.socialButton, { borderColor }]} 
-                onPress={handleGoogleLogin}
-              >
-                <Ionicons name="logo-google" size={24} color={textColor} />
-                <ThemedText style={styles.socialButtonText}>Google</ThemedText>
+            {/* Form Section */}
+            <View style={styles.formContainer}>
+              <View style={[styles.inputContainer, { backgroundColor: inputBgColor, borderColor }]}>
+                <Ionicons name="mail-outline" size={20} color={placeholderColor} style={styles.inputIcon} />
+                <TextInput
+                  style={[styles.input, { color: textColor }]}
+                  placeholder="Email Address"
+                  placeholderTextColor={placeholderColor}
+                  value={email}
+                  onChangeText={setEmail}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                />
+              </View>
+
+              <View style={[styles.inputContainer, { backgroundColor: inputBgColor, borderColor }]}>
+                <Ionicons name="lock-closed-outline" size={20} color={placeholderColor} style={styles.inputIcon} />
+                <TextInput
+                  style={[styles.input, { color: textColor }]}
+                  placeholder="Password"
+                  placeholderTextColor={placeholderColor}
+                  value={password}
+                  onChangeText={setPassword}
+                  secureTextEntry
+                />
+              </View>
+
+              <TouchableOpacity style={styles.primaryButton} onPress={handleEmailLogin}>
+                <ThemedText style={styles.primaryButtonText}>
+                  {isSignUp ? 'Sign Up' : 'Log In'}
+                </ThemedText>
               </TouchableOpacity>
 
-              <TouchableOpacity 
-                style={[styles.socialButton, { borderColor }]} 
-                onPress={handleAppleLogin}
-              >
-                <Ionicons name="logo-apple" size={24} color={textColor} />
-                <ThemedText style={styles.socialButtonText}>Apple</ThemedText>
+              <View style={styles.dividerContainer}>
+                <View style={[styles.dividerLine, { backgroundColor: borderColor }]} />
+                <ThemedText style={styles.dividerText}>or continue with</ThemedText>
+                <View style={[styles.dividerLine, { backgroundColor: borderColor }]} />
+              </View>
+
+              {/* Social Login Buttons */}
+              <View style={styles.socialContainer}>
+                <TouchableOpacity 
+                  style={[styles.socialButton, { borderColor }]} 
+                  onPress={handleGoogleLogin}
+                >
+                  <Ionicons name="logo-google" size={24} color={textColor} />
+                  <ThemedText style={styles.socialButtonText}>Google</ThemedText>
+                </TouchableOpacity>
+
+                <TouchableOpacity 
+                  style={[styles.socialButton, { borderColor }]} 
+                  onPress={handleAppleLogin}
+                >
+                  <Ionicons name="logo-apple" size={24} color={textColor} />
+                  <ThemedText style={styles.socialButtonText}>Apple</ThemedText>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {/* Footer */}
+            <View style={styles.footer}>
+              <ThemedText>
+                {isSignUp ? 'Already have an account? ' : "Don't have an account? "}
+              </ThemedText>
+              <TouchableOpacity onPress={() => setIsSignUp(!isSignUp)}>
+                <ThemedText type="link">{isSignUp ? 'Log In' : 'Sign Up'}</ThemedText>
               </TouchableOpacity>
             </View>
-          </View>
 
-          {/* Footer */}
-          <View style={styles.footer}>
-            <ThemedText>
-              {isSignUp ? 'Already have an account? ' : "Don't have an account? "}
-            </ThemedText>
-            <TouchableOpacity onPress={() => setIsSignUp(!isSignUp)}>
-              <ThemedText type="link">{isSignUp ? 'Log In' : 'Sign Up'}</ThemedText>
-            </TouchableOpacity>
-          </View>
-
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </ThemedView>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </ThemedView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+  },
   container: {
     flex: 1,
   },
+  keyboardView: {
+    flex: 1,
+  },
+  title: {
+    textAlign: 'center',
+  },
   scrollContainer: {
     flexGrow: 1,
-    justifyContent: 'center',
     padding: 24,
+    paddingTop: 60,
+    paddingBottom: 40,
   },
   header: {
     alignItems: 'center',
@@ -224,6 +241,7 @@ const styles = StyleSheet.create({
   footer: {
     flexDirection: 'row',
     justifyContent: 'center',
+    alignItems: 'center',
     marginTop: 32,
   },
 });
