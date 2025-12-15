@@ -1,11 +1,11 @@
 import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import { Platform, StyleSheet, TouchableOpacity } from 'react-native'; // Added TouchableOpacity
 
 import { HelloWave } from '@/components/hello-wave';
 import ParallaxScrollView from '@/components/parallax-scroll-view';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
+import { Link } from 'expo-router'; // Ensure Link is imported
 
 export default function HomeScreen() {
   return (
@@ -21,6 +21,18 @@ export default function HomeScreen() {
         <ThemedText type="title">Welcome!</ThemedText>
         <HelloWave />
       </ThemedView>
+
+      {/* --- ADD THIS SECTION START --- */}
+      <ThemedView style={styles.stepContainer}>
+        <ThemedText type="subtitle">Test Authentication</ThemedText>
+        <Link href="/login" asChild>
+          <TouchableOpacity style={styles.button}>
+            <ThemedText style={styles.buttonText}>Open Login Screen</ThemedText>
+          </TouchableOpacity>
+        </Link>
+      </ThemedView>
+      {/* --- ADD THIS SECTION END --- */}
+
       <ThemedView style={styles.stepContainer}>
         <ThemedText type="subtitle">Step 1: Try it</ThemedText>
         <ThemedText>
@@ -36,49 +48,26 @@ export default function HomeScreen() {
           to open developer tools.
         </ThemedText>
       </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
-            />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
-
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
+      {/* ... rest of your code ... */}
     </ParallaxScrollView>
   );
 }
 
+// Add these to your StyleSheet at the bottom
 const styles = StyleSheet.create({
+  // ... existing styles ...
+  button: {
+    backgroundColor: '#0a7ea4',
+    padding: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  buttonText: {
+    color: '#FFFFFF',
+    fontWeight: 'bold',
+  },
+  // ... existing styles ...
   titleContainer: {
     flexDirection: 'row',
     alignItems: 'center',
