@@ -1,7 +1,6 @@
 import { Image } from 'expo-image';
 import { Platform, StyleSheet, TouchableOpacity } from 'react-native'; // Added TouchableOpacity
 
-import { HelloWave } from '@/components/hello-wave';
 import ParallaxScrollView from '@/components/parallax-scroll-view';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -19,7 +18,7 @@ export default function HomeScreen() {
       }>
       <ThemedView style={styles.titleContainer}>
         <ThemedText type="title">Welcome Back</ThemedText>
-        <HelloWave />
+        
       </ThemedView>
 
       {/* --- ADD THIS SECTION START --- */}
@@ -69,10 +68,14 @@ const styles = StyleSheet.create({
   },
   // ... existing styles ...
   titleContainer: {
-    flexDirection: 'row',
+    flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
+    width: '100%',
+    paddingHorizontal: 20,
     gap: 8,
+    flexWrap: 'wrap',
+
   },
   stepContainer: {
     gap: 8,
