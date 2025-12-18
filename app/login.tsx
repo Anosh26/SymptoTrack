@@ -1,4 +1,4 @@
-// anosh26/symptotrack/SymptoTrack-UI/app/login.tsx
+// app/login.tsx
 import * as WebBrowser from 'expo-web-browser';
 import { useSSO, useSignIn, useSignUp } from '@clerk/clerk-expo';
 import * as Linking from 'expo-linking';
@@ -33,14 +33,22 @@ export default function LoginScreen() {
   // Logic State
   const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState('');
+  
+  // [NEW] Username & Confirm Password
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  
+  // [NEW] Password Visibility Toggle
+  const [showPassword, setShowPassword] = useState(false);
+
   const [code, setCode] = useState('');
   const [pendingVerification, setPendingVerification] = useState(false);
   const [loading, setLoading] = useState(false);
 
   // Clerk Hooks
-  const { signIn, setActive: setActiveSignIn } = useSignIn();
-  const { signUp, setActive: setActiveSignUp } = useSignUp();
+  const { signIn, isLoaded: isSignInLoaded, setActive: setActiveSignIn } = useSignIn();
+  const { signUp, isLoaded: isSignUpLoaded, setActive: setActiveSignUp } = useSignUp();
   const { startSSOFlow } = useSSO();
 
   // --- HANDLERS ---
@@ -67,12 +75,14 @@ export default function LoginScreen() {
   };
 
   const handleEmailSignIn = async () => {
+    if (!isSignInLoaded) return;
     if (!email || !password) return Alert.alert('Error', 'Please fill in all fields');
+    
     try {
       setLoading(true);
-      const result = await signIn!.create({ identifier: email, password });
+      const result = await signIn.create({ identifier: email, password });
       if (result.status === 'complete') {
-        await setActiveSignIn!({ session: result.createdSessionId });
+        await setActiveSignIn({ session: result.createdSessionId });
         router.replace('/(tabs)');
       } else {
         Alert.alert('Info', 'Additional steps required (MFA)');
@@ -85,11 +95,24 @@ export default function LoginScreen() {
   };
 
   const handleEmailSignUp = async () => {
-    if (!email || !password) return Alert.alert('Error', 'Please fill in all fields');
+    if (!isSignUpLoaded) return;
+    
+    // [NEW] Enhanced Validation
+    if (!email || !password || !username || !confirmPassword) {
+      return Alert.alert('Error', 'Please fill in all fields');
+    }
+    if (password !== confirmPassword) {
+      return Alert.alert('Error', 'Passwords do not match');
+    }
+
     try {
       setLoading(true);
-      await signUp!.create({ emailAddress: email, password });
-      await signUp!.prepareEmailAddressVerification({ strategy: 'email_code' });
+      await signUp.create({ 
+        emailAddress: email, 
+        password,
+        username, // [NEW] Save username to Clerk
+      });
+      await signUp.prepareEmailAddressVerification({ strategy: 'email_code' });
       setPendingVerification(true);
     } catch (err: any) {
       Alert.alert('Error', err.errors?.[0]?.message || 'Sign up failed');
@@ -99,12 +122,13 @@ export default function LoginScreen() {
   };
 
   const handleVerifyEmail = async () => {
+    if (!isSignUpLoaded) return;
     if (!code) return Alert.alert('Error', 'Please enter the code');
     try {
       setLoading(true);
-      const result = await signUp!.attemptEmailAddressVerification({ code });
+      const result = await signUp.attemptEmailAddressVerification({ code });
       if (result.status === 'complete') {
-        await setActiveSignUp!({ session: result.createdSessionId });
+        await setActiveSignUp({ session: result.createdSessionId });
         router.replace('/(tabs)');
       } else {
         Alert.alert('Error', 'Verification invalid');
@@ -160,6 +184,18 @@ export default function LoginScreen() {
             ) : (
               // --- MAIN LOGIN/SIGNUP VIEW ---
               <View style={styles.formContainer}>
+                
+                {/* [NEW] Username Field (Sign Up Only) */}
+                {isSignUp && (
+                  <AuthInput 
+                    iconName="person-outline" 
+                    placeholder="Username" 
+                    value={username} 
+                    onChangeText={setUsername} 
+                    autoCapitalize="none" 
+                  />
+                )}
+
                 <AuthInput 
                   iconName="mail-outline" 
                   placeholder="Email Address" 
@@ -173,8 +209,22 @@ export default function LoginScreen() {
                   placeholder="Password" 
                   value={password} 
                   onChangeText={setPassword} 
-                  secureTextEntry 
+                  secureTextEntry={!showPassword} // [NEW] Toggle
+                  // [NEW] Add Eye Icon
+                  rightIconName={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                  onRightIconPress={() => setShowPassword(!showPassword)}
                 />
+
+                {/* [NEW] Confirm Password Field (Sign Up Only) */}
+                {isSignUp && (
+                  <AuthInput 
+                    iconName="lock-closed-outline" 
+                    placeholder="Confirm Password" 
+                    value={confirmPassword} 
+                    onChangeText={setConfirmPassword} 
+                    secureTextEntry={!showPassword} // Matches the main password toggle
+                  />
+                )}
 
                 <TouchableOpacity 
                   style={[styles.primaryButton, loading && { opacity: 0.7 }]} 

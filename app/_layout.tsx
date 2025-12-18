@@ -1,61 +1,85 @@
+// anosh26/symptotrack/SymptoTrack-UI/app/_layout.tsx
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
-import { Stack, useRouter } from 'expo-router'; // Added useRouter
+import { Stack, useRouter, useSegments } from 'expo-router'; 
 import * as SecureStore from 'expo-secure-store';
-import { ClerkProvider } from '@clerk/clerk-expo';
+import { ClerkProvider, ClerkLoaded, useAuth } from '@clerk/clerk-expo';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect, useState } from 'react'; // Added hooks
+import { useEffect } from 'react';
 import 'react-native-reanimated';
 
 export const unstable_settings = {
   anchor: '(tabs)',
 };
+
 const tokenCache = {
   async getToken(key: string) {
-    return SecureStore.getItemAsync(key);
+    try {
+      return SecureStore.getItemAsync(key);
+    } catch (err) {
+      return null;
+    }
   },
   async saveToken(key: string, value: string) {
-    return SecureStore.setItemAsync(key, value);
+    try {
+      return SecureStore.setItemAsync(key, value);
+    } catch (err) {
+      return;
+    }
   },
 };
-export default function RootLayout() {
-  
-  const colorScheme = useColorScheme();
+
+function InitialLayout() {
+  const { isLoaded, isSignedIn } = useAuth();
+  const segments = useSegments(); 
   const router = useRouter();
-  
-  // MOCK AUTHENTICATION STATE
-  // In a real app, this would come from your Auth Context (e.g., Firebase/Supabase)
-  const [isAuthenticated, setIsAuthenticated] = useState(false); 
-  const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
-    setIsMounted(true);
-  }, []);
+    if (!isLoaded) return;
 
-  useEffect(() => {
-    if (isMounted && !isAuthenticated) {
-      // If the app is ready and user is NOT logged in, go to Login
+    // --- DEBUG LOGS (Check your terminal!) ---
+    console.log("Auth Debug:", { 
+      isSignedIn, 
+      currentRoute: segments 
+    });
+
+    const inTabsGroup = segments[0] === '(tabs)';
+    const inLoginRoute = segments[0] === 'login';
+
+    if (isSignedIn && !inTabsGroup) {
+      // 1. If User is logged in, but NOT in tabs -> Go to Tabs
+      console.log("Redirecting to Tabs...");
+      router.replace('/(tabs)');
+    } else if (!isSignedIn && !inLoginRoute) {
+      // 2. If User is NOT logged in, and NOT on login screen -> Go to Login
+      console.log("Redirecting to Login...");
       router.replace('/login');
     }
-  }, [isMounted, isAuthenticated]);
+  }, [isSignedIn, isLoaded, segments]);
 
-  return (<ClerkProvider 
+  return (
+    <Stack>
+      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+      <Stack.Screen name="login" options={{ headerShown: false }} />
+      <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
+    </Stack>
+  );
+}
+
+export default function RootLayout() {
+  const colorScheme = useColorScheme();
+
+  return (
+    <ClerkProvider 
       publishableKey="pk_test_cG9wdWxhci1lbGYtNDEuY2xlcmsuYWNjb3VudHMuZGV2JA"
       tokenCache={tokenCache}
     >
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
-        {/* We keep (tabs) as the main entry, but the useEffect above guards it */}
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        
-        {/* Register the login screen so the router knows about it */}
-        <Stack.Screen name="login" options={{ headerShown: false }} />
-        
-        <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
-      </Stack>
-      <StatusBar style="auto" />
-    </ThemeProvider>
+      <ClerkLoaded> 
+        <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+           <InitialLayout /> 
+           <StatusBar style="auto" />
+        </ThemeProvider>
+      </ClerkLoaded>
     </ClerkProvider>
   );
-  
 }
