@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, Button, FlatList, StyleSheet, Alert } from "react-native";
+import { View, Text, Button, StyleSheet, Alert } from "react-native";
 import { supabase } from "../lib/supabase";
 
 export default function MedicationList({ userId }: { userId: string }) {
@@ -10,7 +10,6 @@ export default function MedicationList({ userId }: { userId: string }) {
   }, [userId]);
 
   const fetchMeds = async () => {
-    // 1. Get the list of drugs for this patient
     const { data } = await supabase
       .from('medications')
       .select('*')
@@ -20,7 +19,6 @@ export default function MedicationList({ userId }: { userId: string }) {
   };
 
   const handleTakeDose = async (medId: string, medName: string) => {
-    // 2. Log that they took it
     const { error } = await supabase
       .from('medication_logs')
       .insert({
@@ -37,25 +35,23 @@ export default function MedicationList({ userId }: { userId: string }) {
   return (
     <View style={styles.container}>
       <Text style={styles.header}>Medications</Text>
-      <FlatList
-        data={meds}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
-          <View style={styles.item}>
-            <View>
-              <Text style={styles.name}>{item.name}</Text>
-              <Text style={styles.detail}>{item.dosage} • {item.frequency}</Text>
-            </View>
-            <Button title="Take" onPress={() => handleTakeDose(item.id, item.name)} />
+      
+      {/* ERROR FIX: Use .map() instead of FlatList */}
+      {meds.map((item) => (
+        <View key={item.id} style={styles.item}>
+          <View>
+            <Text style={styles.name}>{item.name}</Text>
+            <Text style={styles.detail}>{item.dosage} • {item.frequency}</Text>
           </View>
-        )}
-      />
+          <Button title="Take" onPress={() => handleTakeDose(item.id, item.name)} />
+        </View>
+      ))}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { marginTop: 20 },
+  container: { marginTop: 0, marginBottom: 20 },
   header: { fontSize: 20, fontWeight: "bold", marginBottom: 10 },
   item: { 
     flexDirection: "row", 

@@ -1,7 +1,7 @@
-import 'react-native-url-polyfill/auto';
 import { createClient } from '@supabase/supabase-js';
+import 'react-native-url-polyfill/auto';
 
 const supabaseUrl = "https://plpqlkqeyrgvlpayoaar.supabase.co";
-const supabaseAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBscHFsa3FleXJndmxwYXlvYWFyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY3MzE1MTcsImV4cCI6MjA4MjMwNzUxN30.umoV3YW12A3zg3NR_wJGatScFH1dk-GOqm9voblHtPY";
+const supabaseAnonKey = "sb_publishable_IQHZZkVsc8CheqvEPffAkQ_2BexHRbE";
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
