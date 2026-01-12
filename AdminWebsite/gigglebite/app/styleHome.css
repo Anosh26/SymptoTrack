@@ -1,0 +1,81 @@
+/*"home/page.js"*/
+#main {
+    margin-left: 30%;
+    margin-right: 30%;
+    margin-top: 10px;
+}
+
+#bothColumns {
+    display: flex;
+    flex-direction: row;
+    gap: 20px;
+    padding: 10px;
+    align-items: flex-start;
+}
+
+
+#patients, #doctors {
+    margin-top: 0;
+    border: 2px solid greenyellow;
+    border-radius: 10px;
+    padding: 20px;
+    flex: 1;
+}
+
+h2 {
+    text-align: center;
+    padding-bottom: 2%;
+}
+
+.topButtons {
+    display: flex;
+    flex-direction: row;
+    gap: 10px;
+    border-bottom: 2px solid greenyellow;
+    padding-bottom: 2%;
+}
+
+.topButtons button.active {
+    background-color: greenyellow;
+    color: black;
+    font-weight: bold;
+}
+
+.topButtons button {
+    border: none;
+    border-radius: 10px;
+    padding: 2px;
+    flex: 1;
+    font-size: medium;
+}
+
+.topButtons button:hover {
+    background-color: yellowgreen;
+    color: black;
+}
+
+ul {
+    margin-top: 20px;
+    list-style-type: none;
+}
+
+li {
+    margin-bottom: 5px;
+    border-radius: 4px;
+}
+
+li:nth-child(odd) {
+    background-color: gray;
+}
+
+li:hover {
+    background-color: yellowgreen;
+    color: black;
+}
+
+a {
+    padding: 10px;
+    text-decoration: none;
+    color: inherit;
+    display: block;
+}
