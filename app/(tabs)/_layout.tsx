@@ -11,10 +11,15 @@ export default function TabLayout() {
 
   return (
     <Tabs
-      screenOptions={{
+    /*screenOptions={{
         tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
         headerShown: false,
         tabBarButton: HapticTab,
+      }}*/
+     // the below option hides the tab completely.
+      screenOptions={{
+        tabBarStyle: { display: 'none' }, // This hides the tab bar
+        headerShown: false, // This hides the header
       }}>
       <Tabs.Screen
         name="index"
