@@ -18,6 +18,7 @@ export type CheckIn = {
     sentimentAnalysis?: string;
     keywords?: string[];
   };
+  recordingUri?: string;
 };
 
 export type Doctor = {
@@ -119,10 +120,16 @@ export default function App() {
     checkIn: Omit<CheckIn, "id" | "riskLevel" | "riskExplanation">
   ) => {
     try {
+      // Validate pain level (must be 1-10)
+      if (checkIn.painLevel < 1 || checkIn.painLevel > 10) {
+        Alert.alert('Invalid Data', 'Pain level must be between 1 and 10');
+        return;
+      }
+
       // Prepare data for Supabase
       const symptomRecord = {
         user_id: STATIC_USER_ID,
-        symptoms: checkIn.symptoms.join(', '),
+        symptoms: checkIn.symptoms.length > 0 ? checkIn.symptoms.join(', ') : 'None',
         painlvl: checkIn.painLevel,
         description: checkIn.voiceNote || null
       };

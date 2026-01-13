@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { 
   View, 
   Text, 
@@ -6,10 +6,13 @@ import {
   TouchableOpacity, 
   StyleSheet,
   Dimensions,
-  Modal
+  Modal,
+  BackHandler,
+  Alert
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LineChart } from 'react-native-chart-kit';
+import { Audio } from 'expo-av';
 import type { Patient } from '../App';
 
 type Props = {
@@ -19,7 +22,64 @@ type Props = {
 
 export function PatientDetail({ patient, onBack }: Props) {
   const [inVideoCall, setInVideoCall] = useState(false);
+  const [playingId, setPlayingId] = useState<string | null>(null);
   const latestCheckIn = patient.checkIns[patient.checkIns.length - 1];
+  const soundRef = useRef<Audio.Sound | null>(null);
+  
+  // Handle Android back button
+  useEffect(() => {
+    const backAction = () => {
+      onBack();
+      return true; // Prevent default behavior (closing app)
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      backAction
+    );
+
+    return () => backHandler.remove();
+  }, [onBack]);
+
+  // Cleanup sound on unmount
+  useEffect(() => {
+    return () => {
+      if (soundRef.current) {
+        soundRef.current.unloadAsync();
+      }
+    };
+  }, []);
+
+  const playRecording = async (recordingUri: string, checkInId: string) => {
+    try {
+      if (soundRef.current) {
+        await soundRef.current.unloadAsync();
+        soundRef.current = null;
+      }
+
+      setPlayingId(checkInId);
+
+      const { sound } = await Audio.Sound.createAsync(
+        { uri: recordingUri },
+        { shouldPlay: true }
+      );
+      
+      soundRef.current = sound;
+
+      sound.setOnPlaybackStatusUpdate((status) => {
+        if (status.isLoaded && status.didJustFinish) {
+          sound.unloadAsync();
+          soundRef.current = null;
+          setPlayingId(null);
+        }
+      });
+
+    } catch (err) {
+      console.error('Failed to play recording', err);
+      Alert.alert('Error', 'Failed to play recording');
+      setPlayingId(null);
+    }
+  };
   
   const chartData = {
     labels: patient.checkIns.map(checkIn => 
@@ -474,6 +534,16 @@ const styles = StyleSheet.create({
     marginVertical: 8,
     borderRadius: 16,
   },
+  emptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 40,
+  },
+  emptyStateText: {
+    marginTop: 12,
+    fontSize: 16,
+    color: '#6b7280',
+  },
   checkInsList: {
     gap: 12,
   },
@@ -530,15 +600,35 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     padding: 12,
   },
+  transcriptHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
   transcriptLabel: {
     fontSize: 12,
     color: '#9ca3af',
-    marginBottom: 4,
+    fontWeight: '600',
   },
   transcriptText: {
     fontSize: 14,
     color: '#374151',
     fontStyle: 'italic',
+  },
+  miniPlayButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    backgroundColor: '#eff6ff',
+    borderRadius: 4,
+  },
+  miniPlayText: {
+    fontSize: 12,
+    color: '#2563eb',
+    fontWeight: '600',
   },
   videoCallContainer: {
     flex: 1,
@@ -591,4 +681,4 @@ const styles = StyleSheet.create({
   endCallButton: {
     backgroundColor: '#dc2626',
   },
-});
+}); 

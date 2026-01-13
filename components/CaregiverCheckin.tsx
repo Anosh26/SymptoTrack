@@ -1,14 +1,17 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { 
   View, 
   Text, 
   TextInput, 
   TouchableOpacity, 
   ScrollView, 
-  StyleSheet 
+  StyleSheet,
+  Alert,
+  Platform
 } from 'react-native';
 import Slider from '@react-native-community/slider';
 import { Ionicons } from '@expo/vector-icons';
+import { Audio } from 'expo-av';
 import type { Patient, CheckIn } from '../App';
 
 type Props = {
@@ -25,15 +28,22 @@ const symptomOptions = [
   'nausea',
   'dizziness',
   'fever',
-  'loss of appetite'
+  'loss of appetite',
+  'no symptoms'
 ];
 
 export function CaregiverCheckin({ patient, onSubmit, onViewHistory }: Props) {
-  const [painLevel, setPainLevel] = useState(4);
+  const [painLevel, setPainLevel] = useState(1); // Changed from 4 to 1 (minimum allowed)
   const [selectedSymptoms, setSelectedSymptoms] = useState<string[]>([]);
   const [voiceNote, setVoiceNote] = useState('');
   const [isRecording, setIsRecording] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [recordingUri, setRecordingUri] = useState<string | null>(null);
+  const [recordingDuration, setRecordingDuration] = useState(0);
+  
+  const recordingRef = useRef<Audio.Recording | null>(null);
+  const soundRef = useRef<Audio.Sound | null>(null);
+  const durationIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const toggleSymptom = (symptom: string) => {
     setSelectedSymptoms(prev =>
@@ -43,23 +53,138 @@ export function CaregiverCheckin({ patient, onSubmit, onViewHistory }: Props) {
     );
   };
 
+  const startRecording = async () => {
+    try {
+      const permission = await Audio.requestPermissionsAsync();
+      
+      if (permission.status !== 'granted') {
+        Alert.alert('Permission Required', 'Please grant microphone permission to record audio');
+        return;
+      }
+
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: true,
+        playsInSilentModeIOS: true,
+      });
+
+      const { recording } = await Audio.Recording.createAsync(
+        Audio.RecordingOptionsPresets.HIGH_QUALITY
+      );
+      
+      recordingRef.current = recording;
+      setIsRecording(true);
+      setRecordingDuration(0);
+
+      durationIntervalRef.current = setInterval(() => {
+        setRecordingDuration(prev => {
+          if (prev >= 9) {
+            stopRecording();
+            return 10;
+          }
+          return prev + 1;
+        });
+      }, 1000);
+
+    } catch (err) {
+      console.error('Failed to start recording', err);
+      Alert.alert('Error', 'Failed to start recording');
+    }
+  };
+
+  const stopRecording = async () => {
+    if (!recordingRef.current) return;
+
+    try {
+      setIsRecording(false);
+      
+      if (durationIntervalRef.current) {
+        clearInterval(durationIntervalRef.current);
+        durationIntervalRef.current = null;
+      }
+
+      await recordingRef.current.stopAndUnloadAsync();
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: false,
+      });
+
+      const uri = recordingRef.current.getURI();
+      setRecordingUri(uri);
+      recordingRef.current = null;
+
+      Alert.alert('Recording Complete', 'Voice note recorded successfully!');
+    } catch (err) {
+      console.error('Failed to stop recording', err);
+      Alert.alert('Error', 'Failed to stop recording');
+    }
+  };
+
+  const toggleRecording = () => {
+    if (isRecording) {
+      stopRecording();
+    } else {
+      startRecording();
+    }
+  };
+
+  const playRecording = async () => {
+    if (!recordingUri) {
+      Alert.alert('No Recording', 'Please record a voice note first');
+      return;
+    }
+
+    try {
+      if (soundRef.current) {
+        await soundRef.current.unloadAsync();
+        soundRef.current = null;
+      }
+
+      const { sound } = await Audio.Sound.createAsync(
+        { uri: recordingUri },
+        { shouldPlay: true }
+      );
+      
+      soundRef.current = sound;
+
+      sound.setOnPlaybackStatusUpdate((status) => {
+        if (status.isLoaded && status.didJustFinish) {
+          sound.unloadAsync();
+          soundRef.current = null;
+        }
+      });
+
+    } catch (err) {
+      console.error('Failed to play recording', err);
+      Alert.alert('Error', 'Failed to play recording');
+    }
+  };
+
+  const deleteRecording = () => {
+    setRecordingUri(null);
+    setRecordingDuration(0);
+    setVoiceNote('');
+  };
+
   const handleSubmit = () => {
     const today = new Date().toISOString().split('T')[0];
     
+    // Don't include recordingUri in the data sent to database
     onSubmit({
       date: today,
       painLevel,
       symptoms: selectedSymptoms,
-      voiceNote,
+      voiceNote: voiceNote || (recordingUri ? `[Voice Recording: ${recordingDuration}s]` : ''),
       voiceTranscript: voiceNote
+      // recordingUri is intentionally NOT included here
     });
 
     setSubmitted(true);
     setTimeout(() => {
       setSubmitted(false);
-      setPainLevel(4);
+      setPainLevel(1); // Reset to 1 instead of 4
       setSelectedSymptoms([]);
       setVoiceNote('');
+      setRecordingUri(null);
+      setRecordingDuration(0);
     }, 2000);
   };
 
@@ -117,7 +242,7 @@ export function CaregiverCheckin({ patient, onSubmit, onViewHistory }: Props) {
               
               <Slider
                 style={styles.slider}
-                minimumValue={0}
+                minimumValue={1}
                 maximumValue={10}
                 step={1}
                 value={painLevel}
@@ -129,9 +254,9 @@ export function CaregiverCheckin({ patient, onSubmit, onViewHistory }: Props) {
             </View>
             
             <View style={styles.painLabels}>
-              <Text style={styles.painLabelText}>No Pain</Text>
-              <Text style={styles.painLabelText}>Moderate</Text>
-              <Text style={styles.painLabelText}>Severe</Text>
+              <Text style={styles.painLabelText}>Mild (1)</Text>
+              <Text style={styles.painLabelText}>Moderate (5)</Text>
+              <Text style={styles.painLabelText}>Severe (10)</Text>
             </View>
 
             {latestCheckIn && (
@@ -179,25 +304,51 @@ export function CaregiverCheckin({ patient, onSubmit, onViewHistory }: Props) {
               <Text style={styles.labelOptional}>(optional, 10 seconds)</Text>
             </Text>
 
-            <TouchableOpacity
-              onPress={() => setIsRecording(!isRecording)}
-              style={[
-                styles.recordButton,
-                isRecording && styles.recordButtonActive
-              ]}
-            >
-              <Ionicons 
-                name={isRecording ? "mic" : "mic-outline"} 
-                size={24} 
-                color={isRecording ? "#dc2626" : "#374151"} 
-              />
-              <Text style={[
-                styles.recordButtonText,
-                isRecording && styles.recordButtonTextActive
-              ]}>
-                {isRecording ? 'Recording...' : 'Tap to Record'}
-              </Text>
-            </TouchableOpacity>
+            {recordingUri ? (
+              <View style={styles.recordedContainer}>
+                <View style={styles.recordedInfo}>
+                  <Ionicons name="mic" size={24} color="#10b981" />
+                  <Text style={styles.recordedText}>
+                    Recording saved ({recordingDuration}s)
+                  </Text>
+                </View>
+                <View style={styles.recordedActions}>
+                  <TouchableOpacity
+                    onPress={playRecording}
+                    style={styles.playButton}
+                  >
+                    <Ionicons name="play" size={20} color="#2563eb" />
+                    <Text style={styles.playButtonText}>Play</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={deleteRecording}
+                    style={styles.deleteButton}
+                  >
+                    <Ionicons name="trash-outline" size={20} color="#dc2626" />
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ) : (
+              <TouchableOpacity
+                onPress={toggleRecording}
+                style={[
+                  styles.recordButton,
+                  isRecording && styles.recordButtonActive
+                ]}
+              >
+                <Ionicons 
+                  name={isRecording ? "stop-circle" : "mic-outline"} 
+                  size={24} 
+                  color={isRecording ? "#dc2626" : "#374151"} 
+                />
+                <Text style={[
+                  styles.recordButtonText,
+                  isRecording && styles.recordButtonTextActive
+                ]}>
+                  {isRecording ? `Recording... ${recordingDuration}s / 10s` : 'Tap to Record'}
+                </Text>
+              </TouchableOpacity>
+            )}
 
             <Text style={styles.voiceNoteHelper}>Or type what you would say:</Text>
             <TextInput
@@ -455,5 +606,52 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#1e40af',
     lineHeight: 20,
+  },
+  recordedContainer: {
+    backgroundColor: '#f0fdf4',
+    borderWidth: 1,
+    borderColor: '#86efac',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 12,
+  },
+  recordedInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 12,
+  },
+  recordedText: {
+    flex: 1,
+    fontSize: 14,
+    color: '#166534',
+    fontWeight: '500',
+  },
+  recordedActions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  playButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: '#eff6ff',
+    padding: 10,
+    borderRadius: 6,
+  },
+  playButtonText: {
+    color: '#2563eb',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  deleteButton: {
+    width: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#fef2f2',
+    padding: 10,
+    borderRadius: 6,
   },
 });
