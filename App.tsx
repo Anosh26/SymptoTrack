@@ -4,7 +4,7 @@ import { AppointmentModal } from "./components/AppointmentModal";
 import { AppointmentsList } from "./components/AppointmentsList";
 import { CaregiverCheckin } from "./components/CaregiverCheckin";
 import { PatientDetail } from "./components/PatientDetail";
-import { supabase, SymptomRecord } from "./lib/supabase";
+import { supabase, SymptomRecord, AppointmentRecord } from "./lib/supabase";
 
 export type CheckIn = {
   id: string;
@@ -54,32 +54,7 @@ export type Patient = {
 
 // Mock patient data - keeping static for now
 const STATIC_USER_ID = "6f209238-27e9-464e-881d-67b59b993a53"; // Replace with one of your actual user IDs
-
-// Mock appointments data
-const mockAppointments: Appointment[] = [
-  {
-    id: "apt1",
-    patient_id: STATIC_USER_ID,
-    doctor_id: "d1",
-    date: "2026-01-15",
-    time: "10:00 AM",
-    status: "Confirmed",
-    type: "Video Consultation",
-    notes: "Follow-up on recovery progress",
-    created_at: "2026-01-10T08:00:00Z"
-  },
-  {
-    id: "apt2",
-    patient_id: STATIC_USER_ID,
-    doctor_id: "d1",
-    date: "2026-01-20",
-    time: "2:30 PM",
-    status: "Pending",
-    type: "Video Consultation",
-    notes: "Discuss pain management options",
-    created_at: "2026-01-12T14:00:00Z"
-  }
-];
+const STATIC_DOCTOR_ID = "f1f155f1-44bc-4e02-938e-45195850c2af"; // Shreyash - doctor from users table
 
 const mockPatient: Patient = {
   id: STATIC_USER_ID,
@@ -88,12 +63,12 @@ const mockPatient: Patient = {
   condition: "Post-surgery recovery",
   currentRiskLevel: "low",
   assignedDoctor: {
-    id: "d1",
+    id: STATIC_DOCTOR_ID,
     name: "Dr. Emily Carter",
     specialty: "Post-operative Care"
   },
   checkIns: [],
-  appointments: mockAppointments
+  appointments: []
 };
 
 export default function App() {
@@ -103,14 +78,22 @@ export default function App() {
   const [showAppointmentModal, setShowAppointmentModal] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  // Load check-ins from Supabase on mount
+  // Load check-ins and appointments from Supabase on mount
   useEffect(() => {
-    loadCheckIns();
+    loadData();
   }, []);
+
+  const loadData = async () => {
+    setLoading(true);
+    await Promise.all([
+      loadCheckIns(),
+      loadAppointments()
+    ]);
+    setLoading(false);
+  };
 
   const loadCheckIns = async () => {
     try {
-      setLoading(true);
       const { data, error } = await supabase
         .from('symptoms')
         .select<'*', SymptomRecord>('*')
@@ -147,10 +130,52 @@ export default function App() {
         currentRiskLevel: currentRisk
       }));
     } catch (err) {
-      console.error('Unexpected error:', err);
-      Alert.alert('Error', 'An unexpected error occurred');
-    } finally {
-      setLoading(false);
+      console.error('Unexpected error loading check-ins:', err);
+      Alert.alert('Error', 'An unexpected error occurred while loading check-ins');
+    }
+  };
+
+  const loadAppointments = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('appointments')
+        .select<'*', AppointmentRecord>('*')
+        .eq('patient_id', STATIC_USER_ID)
+        .order('date', { ascending: false });
+
+      if (error) {
+        console.error('Error loading appointments:', error);
+        Alert.alert('Error', 'Failed to load appointments');
+        return;
+      }
+
+      // Convert Supabase data to Appointment format
+      const appointments: Appointment[] = (data || []).map(record => {
+        const dateTime = new Date(record.date);
+        return {
+          id: record.id,
+          patient_id: record.patient_id,
+          doctor_id: record.doctor_id,
+          date: dateTime.toISOString().split('T')[0],
+          time: dateTime.toLocaleTimeString('en-US', { 
+            hour: 'numeric', 
+            minute: '2-digit',
+            hour12: true 
+          }),
+          status: record.status as Appointment['status'],
+          type: record.type as Appointment['type'],
+          notes: record.notes || '',
+          created_at: record.created_at
+        };
+      });
+
+      setPatient(prev => ({
+        ...prev,
+        appointments
+      }));
+    } catch (err) {
+      console.error('Unexpected error loading appointments:', err);
+      Alert.alert('Error', 'An unexpected error occurred while loading appointments');
     }
   };
 
@@ -201,57 +226,66 @@ export default function App() {
     }
   };
 
-  const bookAppointment = (appointmentData: Omit<Appointment, "id" | "created_at" | "patient_id">) => {
-    // Static implementation - just add to local state
-    const newAppointment: Appointment = {
-      id: `apt${Date.now()}`,
-      patient_id: STATIC_USER_ID,
-      created_at: new Date().toISOString(),
-      ...appointmentData
-    };
-
-    setPatient(prev => ({
-      ...prev,
-      appointments: [...(prev.appointments || []), newAppointment]
-    }));
-
-    Alert.alert('Success', 'Appointment request submitted!');
-
-    /* DATABASE INTEGRATION (COMMENTED OUT FOR NOW)
-    const addAppointment = async (appointmentData: Omit<Appointment, "id" | "created_at">) => {
-      try {
-        const appointmentRecord = {
-          patient_id: STATIC_USER_ID,
-          doctor_id: appointmentData.doctor_id,
-          date: `${appointmentData.date} ${appointmentData.time}`,
-          status: appointmentData.status || 'Pending',
-          type: appointmentData.type || 'Video Consultation',
-          notes: appointmentData.notes
-        };
-
-        const { data, error } = await supabase
-          .from('appointments')
-          .insert([appointmentRecord])
-          .select()
-          .single();
-
-        if (error) {
-          console.error('Error booking appointment:', error);
-          Alert.alert('Error', 'Failed to book appointment');
-          return;
-        }
-
-        console.log('Appointment booked:', data);
-        Alert.alert('Success', 'Appointment request submitted!');
-        
-        // Reload appointments
-        await loadAppointments();
-      } catch (err) {
-        console.error('Unexpected error:', err);
-        Alert.alert('Error', 'An unexpected error occurred');
+  const bookAppointment = async (appointmentData: Omit<Appointment, "id" | "created_at" | "patient_id">) => {
+    try {
+      // Parse date and time separately for better compatibility
+      const [year, month, day] = appointmentData.date.split('-').map(Number);
+      const timeString = appointmentData.time;
+      
+      // Parse time (handles both 12-hour and 24-hour format)
+      const timeParts = timeString.match(/(\d+):(\d+)\s*(AM|PM)?/i);
+      if (!timeParts) {
+        Alert.alert('Error', 'Invalid time format');
+        return;
       }
-    };
-    */
+      
+      let hours = parseInt(timeParts[1]);
+      const minutes = parseInt(timeParts[2]);
+      const period = timeParts[3]?.toUpperCase();
+      
+      // Convert to 24-hour format if needed
+      if (period === 'PM' && hours !== 12) hours += 12;
+      if (period === 'AM' && hours === 12) hours = 0;
+      
+      // Create date object
+      const appointmentDateTime = new Date(year, month - 1, day, hours, minutes);
+      
+      // Validate the date
+      if (isNaN(appointmentDateTime.getTime())) {
+        Alert.alert('Error', 'Invalid date or time format');
+        return;
+      }
+
+      const appointmentRecord = {
+        patient_id: STATIC_USER_ID,
+        doctor_id: appointmentData.doctor_id,
+        date: appointmentDateTime.toISOString(),
+        status: appointmentData.status || 'Pending',
+        type: appointmentData.type || 'Video Consultation',
+        notes: appointmentData.notes
+      };
+
+      const { data, error } = await supabase
+        .from('appointments')
+        .insert([appointmentRecord])
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error booking appointment:', error);
+        Alert.alert('Error', 'Failed to book appointment. Please try again.');
+        return;
+      }
+
+      console.log('Appointment booked:', data);
+      Alert.alert('Success', 'Appointment request submitted!');
+      
+      // Reload appointments from database
+      await loadAppointments();
+    } catch (err) {
+      console.error('Unexpected error:', err);
+      Alert.alert('Error', 'An unexpected error occurred');
+    }
   };
 
   if (loading) {

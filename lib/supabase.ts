@@ -15,3 +15,15 @@ export type SymptomRecord = {
   timestamp: string;
   description: string | null;
 };
+
+// New AppointmentRecord type based on your database schema
+export type AppointmentRecord = {
+  id: string;
+  patient_id: string;
+  doctor_id: string;
+  date: string; // This stores both date and time as timestamptz
+  status: string;
+  type: string;
+  notes: string | null;
+  created_at: string;
+};

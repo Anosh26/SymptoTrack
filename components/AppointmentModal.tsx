@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,7 +7,8 @@ import {
   TextInput,
   ScrollView,
   StyleSheet,
-  Platform
+  Platform,
+  BackHandler
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import type { Appointment, Doctor } from '../App';
@@ -24,6 +25,24 @@ export function AppointmentModal({ visible, onClose, onSubmit, doctor }: Props) 
   const [selectedTime, setSelectedTime] = useState('');
   const [appointmentType, setAppointmentType] = useState<"Video Consultation" | "In-Person" | "Phone Call">("Video Consultation");
   const [notes, setNotes] = useState('');
+
+  // Handle Android back button
+  useEffect(() => {
+    const backAction = () => {
+      if (visible) {
+        onClose();
+        return true; // Prevent default behavior
+      }
+      return false; // Allow default behavior when modal is not visible
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      backAction
+    );
+
+    return () => backHandler.remove();
+  }, [visible, onClose]);
 
   const appointmentTypes: Array<"Video Consultation" | "In-Person" | "Phone Call"> = [
     "Video Consultation",
