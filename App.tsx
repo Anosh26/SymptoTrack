@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { Alert, StyleSheet, Text, View } from "react-native";
+import { AppointmentModal } from "./components/AppointmentModal";
+import { AppointmentsList } from "./components/AppointmentsList";
 import { CaregiverCheckin } from "./components/CaregiverCheckin";
 import { PatientDetail } from "./components/PatientDetail";
 import { supabase, SymptomRecord } from "./lib/supabase";
@@ -21,6 +23,18 @@ export type CheckIn = {
   recordingUri?: string;
 };
 
+export type Appointment = {
+  id: string;
+  patient_id: string;
+  doctor_id: string;
+  date: string;
+  time: string;
+  status: "Pending" | "Confirmed" | "Cancelled" | "Completed";
+  type: "Video Consultation" | "In-Person" | "Phone Call";
+  notes: string;
+  created_at: string;
+};
+
 export type Doctor = {
   id: string;
   name: string;
@@ -35,10 +49,37 @@ export type Patient = {
   checkIns: CheckIn[];
   currentRiskLevel: "low" | "medium" | "high";
   assignedDoctor?: Doctor;
+  appointments?: Appointment[];
 };
 
 // Mock patient data - keeping static for now
 const STATIC_USER_ID = "6f209238-27e9-464e-881d-67b59b993a53"; // Replace with one of your actual user IDs
+
+// Mock appointments data
+const mockAppointments: Appointment[] = [
+  {
+    id: "apt1",
+    patient_id: STATIC_USER_ID,
+    doctor_id: "d1",
+    date: "2026-01-15",
+    time: "10:00 AM",
+    status: "Confirmed",
+    type: "Video Consultation",
+    notes: "Follow-up on recovery progress",
+    created_at: "2026-01-10T08:00:00Z"
+  },
+  {
+    id: "apt2",
+    patient_id: STATIC_USER_ID,
+    doctor_id: "d1",
+    date: "2026-01-20",
+    time: "2:30 PM",
+    status: "Pending",
+    type: "Video Consultation",
+    notes: "Discuss pain management options",
+    created_at: "2026-01-12T14:00:00Z"
+  }
+];
 
 const mockPatient: Patient = {
   id: STATIC_USER_ID,
@@ -51,12 +92,15 @@ const mockPatient: Patient = {
     name: "Dr. Emily Carter",
     specialty: "Post-operative Care"
   },
-  checkIns: []
+  checkIns: [],
+  appointments: mockAppointments
 };
 
 export default function App() {
   const [patient, setPatient] = useState<Patient>(mockPatient);
   const [showHistory, setShowHistory] = useState(false);
+  const [showAppointments, setShowAppointments] = useState(false);
+  const [showAppointmentModal, setShowAppointmentModal] = useState(false);
   const [loading, setLoading] = useState(true);
 
   // Load check-ins from Supabase on mount
@@ -157,6 +201,59 @@ export default function App() {
     }
   };
 
+  const bookAppointment = (appointmentData: Omit<Appointment, "id" | "created_at" | "patient_id">) => {
+    // Static implementation - just add to local state
+    const newAppointment: Appointment = {
+      id: `apt${Date.now()}`,
+      patient_id: STATIC_USER_ID,
+      created_at: new Date().toISOString(),
+      ...appointmentData
+    };
+
+    setPatient(prev => ({
+      ...prev,
+      appointments: [...(prev.appointments || []), newAppointment]
+    }));
+
+    Alert.alert('Success', 'Appointment request submitted!');
+
+    /* DATABASE INTEGRATION (COMMENTED OUT FOR NOW)
+    const addAppointment = async (appointmentData: Omit<Appointment, "id" | "created_at">) => {
+      try {
+        const appointmentRecord = {
+          patient_id: STATIC_USER_ID,
+          doctor_id: appointmentData.doctor_id,
+          date: `${appointmentData.date} ${appointmentData.time}`,
+          status: appointmentData.status || 'Pending',
+          type: appointmentData.type || 'Video Consultation',
+          notes: appointmentData.notes
+        };
+
+        const { data, error } = await supabase
+          .from('appointments')
+          .insert([appointmentRecord])
+          .select()
+          .single();
+
+        if (error) {
+          console.error('Error booking appointment:', error);
+          Alert.alert('Error', 'Failed to book appointment');
+          return;
+        }
+
+        console.log('Appointment booked:', data);
+        Alert.alert('Success', 'Appointment request submitted!');
+        
+        // Reload appointments
+        await loadAppointments();
+      } catch (err) {
+        console.error('Unexpected error:', err);
+        Alert.alert('Error', 'An unexpected error occurred');
+      }
+    };
+    */
+  };
+
   if (loading) {
     return (
       <View style={loadingStyles.container}>
@@ -183,15 +280,35 @@ export default function App() {
           <PatientDetail
             patient={patient}
             onBack={() => setShowHistory(false)}
+            onBookAppointment={() => {
+              setShowHistory(false);
+              setShowAppointmentModal(true);
+            }}
+          />
+        ) : showAppointments ? (
+          <AppointmentsList
+            patient={patient}
+            onBack={() => setShowAppointments(false)}
+            onBookNew={() => setShowAppointmentModal(true)}
           />
         ) : (
           <CaregiverCheckin
             patient={patient}
             onSubmit={addCheckIn}
             onViewHistory={() => setShowHistory(true)}
+            onViewAppointments={() => setShowAppointments(true)}
+            onBookAppointment={() => setShowAppointmentModal(true)}
           />
         )}
       </View>
+
+      {/* Appointment Booking Modal */}
+      <AppointmentModal
+        visible={showAppointmentModal}
+        onClose={() => setShowAppointmentModal(false)}
+        onSubmit={bookAppointment}
+        doctor={patient.assignedDoctor}
+      />
     </View>
   );
 }

@@ -18,6 +18,8 @@ type Props = {
   patient: Patient;
   onSubmit: (checkIn: Omit<CheckIn, 'id' | 'riskLevel' | 'riskExplanation'>) => void;
   onViewHistory?: () => void;
+  onViewAppointments?: () => void;
+  onBookAppointment?: () => void;
 };
 
 const symptomOptions = [
@@ -28,11 +30,10 @@ const symptomOptions = [
   'nausea',
   'dizziness',
   'fever',
-  'loss of appetite',
-  'no symptoms'
+  'loss of appetite'
 ];
 
-export function CaregiverCheckin({ patient, onSubmit, onViewHistory }: Props) {
+export function CaregiverCheckin({ patient, onSubmit, onViewHistory, onViewAppointments, onBookAppointment }: Props) {
   const [painLevel, setPainLevel] = useState(1); // Changed from 4 to 1 (minimum allowed)
   const [selectedSymptoms, setSelectedSymptoms] = useState<string[]>([]);
   const [voiceNote, setVoiceNote] = useState('');
@@ -219,6 +220,30 @@ export function CaregiverCheckin({ patient, onSubmit, onViewHistory }: Props) {
           <Ionicons name="time-outline" size={20} color="#2563eb" />
           <Text style={styles.historyButtonText}>View Check-in History</Text>
         </TouchableOpacity>
+      )}
+
+      {/* Appointments Buttons */}
+      {patient.assignedDoctor && (
+        <View style={styles.appointmentsRow}>
+          {onViewAppointments && (
+            <TouchableOpacity 
+              style={styles.appointmentButton}
+              onPress={onViewAppointments}
+            >
+              <Ionicons name="calendar-outline" size={20} color="#10b981" />
+              <Text style={styles.appointmentButtonText}>My Appointments</Text>
+            </TouchableOpacity>
+          )}
+          {onBookAppointment && (
+            <TouchableOpacity 
+              style={styles.bookAppointmentButton}
+              onPress={onBookAppointment}
+            >
+              <Ionicons name="add-circle-outline" size={20} color="#fff" />
+              <Text style={styles.bookAppointmentButtonText}>Book Appointment</Text>
+            </TouchableOpacity>
+          )}
+        </View>
       )}
 
       {submitted ? (
@@ -435,6 +460,43 @@ const styles = StyleSheet.create({
   },
   historyButtonText: {
     color: '#2563eb',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  appointmentsRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 16,
+  },
+  appointmentButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#f0fdf4',
+    padding: 12,
+    borderRadius: 8,
+    gap: 8,
+    borderWidth: 1,
+    borderColor: '#86efac',
+  },
+  appointmentButtonText: {
+    color: '#10b981',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  bookAppointmentButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#8b5cf6',
+    padding: 12,
+    borderRadius: 8,
+    gap: 8,
+  },
+  bookAppointmentButtonText: {
+    color: '#fff',
     fontSize: 14,
     fontWeight: '600',
   },

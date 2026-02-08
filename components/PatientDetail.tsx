@@ -18,9 +18,10 @@ import type { Patient } from '../App';
 type Props = {
   patient: Patient;
   onBack: () => void;
+  onBookAppointment?: () => void;
 };
 
-export function PatientDetail({ patient, onBack }: Props) {
+export function PatientDetail({ patient, onBack, onBookAppointment }: Props) {
   const [inVideoCall, setInVideoCall] = useState(false);
   const [playingId, setPlayingId] = useState<string | null>(null);
   const latestCheckIn = patient.checkIns[patient.checkIns.length - 1];
@@ -194,13 +195,23 @@ export function PatientDetail({ patient, onBack }: Props) {
             </View>
           </View>
           
-          <TouchableOpacity 
-            onPress={handleStartVideoCall}
-            style={styles.videoButton}
-          >
-            <Ionicons name="videocam" size={20} color="#fff" />
-            <Text style={styles.videoButtonText}>Start Video Consultation</Text>
-          </TouchableOpacity>
+          <View style={styles.buttonsRow}>
+            <TouchableOpacity 
+              onPress={handleStartVideoCall}
+              style={styles.videoButton}>
+              <Ionicons name="videocam" size={20} color="#fff" />
+              <Text style={styles.videoButtonText}>Start Video Call</Text>
+            </TouchableOpacity>
+
+            {onBookAppointment && (
+              <TouchableOpacity 
+                onPress={onBookAppointment}
+                style={styles.appointmentButtonSmall}>
+                <Ionicons name="calendar" size={20} color="#8b5cf6" />
+                <Text style={styles.appointmentButtonSmallText}>Book Appointment</Text>
+              </TouchableOpacity>
+            )}
+          </View>
         </View>
 
         {/* Risk Alert Explanation */}
@@ -451,7 +462,12 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '600',
   },
+  buttonsRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
   videoButton: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -462,7 +478,24 @@ const styles = StyleSheet.create({
   },
   videoButtonText: {
     color: '#fff',
-    fontSize: 16,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  appointmentButtonSmall: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: '#f5f3ff',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#c4b5fd',
+  },
+  appointmentButtonSmallText: {
+    color: '#8b5cf6',
+    fontSize: 14,
     fontWeight: '600',
   },
   alertCard: {
@@ -681,4 +714,4 @@ const styles = StyleSheet.create({
   endCallButton: {
     backgroundColor: '#dc2626',
   },
-}); 
+});
