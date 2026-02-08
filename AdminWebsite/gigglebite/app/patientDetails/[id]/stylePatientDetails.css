@@ -1,0 +1,28 @@
+/*"patientDetails/[id]/stylePatientDetails.css"*/
+#main {
+    margin-left: 30%;
+    margin-right: 30%;
+    margin-top: 10px;
+}
+
+#top {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+}
+
+select {
+    margin: 20px;
+    border-radius: 10px;
+    padding: 3px;
+}
+
+input, #home {
+    border: none;
+    border-radius: 10px;
+    padding: 5px;
+}
+
+input:hover, #home:hover {
+    background-color: yellowgreen;
+}

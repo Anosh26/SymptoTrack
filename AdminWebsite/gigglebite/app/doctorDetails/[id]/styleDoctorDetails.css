@@ -1,0 +1,48 @@
+/*"doctorDetails/[id]/styleDoctorDetails.css"*/
+#main {
+    margin-left: 30%;
+    margin-right: 30%;
+    margin-top: 10px;
+}
+
+#top {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+}
+
+#home {
+    border: none;
+    border-radius: 10px;
+    padding: 5px;
+}
+
+#home:hover {
+    background-color: yellowgreen;
+}
+
+ul {
+    margin-top: 20px;
+    list-style-type: none;
+}
+
+li {
+    margin-bottom: 5px;
+    border-radius: 4px;
+}
+
+li:nth-child(odd) {
+    background-color: gray;
+}
+
+li:hover {
+    background-color: yellowgreen;
+    color: black;
+}
+
+a {
+    padding: 10px;
+    text-decoration: none;
+    color: inherit;
+    display: block;
+}
