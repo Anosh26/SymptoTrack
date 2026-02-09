@@ -21,7 +21,7 @@ export default function MedicationList({ userId }: { userId: string }) {
   const handleTakeDose = async (medId: string, medName: string) => {
     const { error } = await supabase
       .from('medication_logs')
-      .insert({
+      .insert({ 
         medication_id: medId,
         status: 'taken',
         taken_at: new Date().toISOString(),
