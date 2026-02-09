@@ -1,46 +1,29 @@
 'use client';
 
-import { useEffect, useState, use } from 'react';
-import { supabase } from '../../lib/supabaseClient';
 import { useRouter } from 'next/navigation';
+import { use, useEffect, useState } from 'react';
+import { supabase } from '../../lib/supabaseClient';
 import "./stylePatientDetails.css";
 
 export default function PatientDetails({ params }) {
-    const { id } = use(params);     //get ID from URL
+    const { id } = use(params);
     const router = useRouter();
-
     const [patient, setPatient] = useState(null);
     const [doctors, setDoctors] = useState([]);
-    const [currentDoctorName, setCurrentDoctorName] = useState('no one');
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         async function loadData() {
-            //get this patient
             const { data: pData } = await supabase
                 .from('users')
-                .select('name, assigned_doc')
+                .select('*')
                 .eq('id', id)
                 .single();
 
-            //get all doctors
             const { data: dData } = await supabase
                 .from('users')
                 .select('id, name')
                 .eq('role', 'doctor');
-
-            //getting currently assigned doctor name
-            if (pData && pData.assigned_doc && pData.assigned_doc !== 'Dr. Smit') {
-                const { data: docData } = await supabase
-                    .from('users')
-                    .select('name')
-                    .eq('id', pData.assigned_doc)
-                    .single();
-                
-                if (docData) setCurrentDoctorName(docData.name);
-            } else {
-                setCurrentDoctorName('no one');
-            }
 
             setPatient(pData);
             setDoctors(dData || []);
@@ -51,47 +34,85 @@ export default function PatientDetails({ params }) {
 
     async function assignDoctor(formData) {
         const selectedDoctorId = formData.get('selectedDoctor');
-        const selectedDoctorName = doctors.find(d => d.id === selectedDoctorId).name;
+        const updateValue = selectedDoctorId === 'none' ? 'Dr. Smit' : selectedDoctorId;
 
         const { error } = await supabase
             .from('users')
-            .update({ assigned_doc: selectedDoctorId })
+            .update({ assigned_doc: updateValue })
             .eq('id', id);
 
         if (error) {
-            alert("could not assign DOTOR");
-            console.log(error.message);
+            alert("Error: " + error.message);
         } else {
-            alert(`${selectedDoctorName} assigned to ${patient.name}`);
-            setCurrentDoctorName(selectedDoctorName);
+            router.refresh();
+            window.location.reload(); 
         }
     }
 
-    if (loading) return <div id="main">Take a break, have a KitKat!</div>;
-    if (!patient) return <div id="main">Patient is an Enigma!</div>;
+    if (loading) return <div className="loading">Loading...</div>;
+    if (!patient) return <div className="error">Patient not found!</div>;
+
+    const assignedId = patient.assigned_doc;
+    const isAssigned = assignedId && assignedId !== 'Dr. Smit';
+    const currentDoctor = isAssigned ? doctors.find(d => d.id === assignedId) : null;
+    const riskClass = patient.risk_level === 'High' ? 'risk-high' : 'risk-normal';
 
     return (
         <div id="main">
-            <div id="top">
-                <h1>{patient.name}</h1>
-                <button id="home" onClick={() => router.push('/')}>HOME</button>
+            <nav className="top-nav">
+                <button className="back-btn" onClick={() => router.push('/')}>← Back to Dashboard</button>
+            </nav>
+
+            <header className="patient-header">
+                <div>
+                    <h1 className="patient-name">{patient.name}</h1>
+                    <span className="patient-id">ID: {patient.id.slice(0, 8)}...</span>
+                </div>
+                <div className={`status-badge ${riskClass}`}>
+                    {patient.risk_level || 'Unknown Risk'}
+                </div>
+            </header>
+
+            <div className="details-grid">
+                <div className="card info-card">
+                    <h3>Medical Status</h3>
+                    <div className="info-row">
+                        <label>Condition</label>
+                        <p>{patient.condition || 'General Checkup'}</p>
+                    </div>
+                    <div className="info-row">
+                        <label>Current Status</label>
+                        <p>{patient.status || 'Active'}</p>
+                    </div>
+                    <div className="info-row">
+                        <label>Trend</label>
+                        <p>{patient.trend || 'Stable'}</p>
+                    </div>
+                </div>
+
+                <div className="card action-card">
+                    <h3>Doctor Assignment</h3>
+                    <div className="current-assignment">
+                        <label>Currently Assigned To:</label>
+                        <p className="doc-name">{currentDoctor ? currentDoctor.name : 'No Doctor Assigned'}</p>
+                    </div>
+
+                    <form action={assignDoctor} className="assign-form">
+                        <label htmlFor="doctorsList">Change Assignment</label>
+                        <div className="select-wrapper">
+                            <select id="doctorsList" name="selectedDoctor" defaultValue={isAssigned ? assignedId : 'none'}>
+                                <option value="none">-- No Doctor (Unassign) --</option>
+                                {doctors.map((doctor) => (
+                                    <option key={doctor.id} value={doctor.id}>
+                                        {doctor.name}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+                        <input type="submit" value="Update" className="submit-btn" />
+                    </form>
+                </div>
             </div>
-            <br/>
-
-            <h3>Currently assigned doctor is {currentDoctorName}</h3>
-
-            <form action={assignDoctor}>
-                <label htmlFor="doctorsList">Assign a doctor:</label>
-                <select id="doctorsList" name="selectedDoctor" defaultValue={patient.assigned_doc}>
-                    {doctors.map((doctor) => (
-                        <option key={doctor.id} value={doctor.id}>
-                            {doctor.name}
-                        </option>
-                    ))}
-                </select>
-
-                <input type="submit" value="Assign" />
-            </form>
         </div>
     );
 }

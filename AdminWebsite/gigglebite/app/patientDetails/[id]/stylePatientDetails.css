@@ -1,28 +1,103 @@
-/*"patientDetails/[id]/stylePatientDetails.css"*/
 #main {
-    margin-left: 30%;
-    margin-right: 30%;
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 40px 20px;
+}
+
+.top-nav { margin-bottom: 20px; }
+.back-btn {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    padding: 0;
+}
+.back-btn:hover { color: var(--primary); text-decoration: underline; }
+
+.patient-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 30px;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 20px;
+}
+
+.patient-name { font-size: 2.5rem; color: var(--text-main); line-height: 1; }
+.patient-id { font-family: monospace; color: var(--text-muted); font-size: 0.9rem; }
+
+.status-badge {
+    padding: 6px 16px;
+    border-radius: 99px;
+    font-weight: 700;
+    text-transform: uppercase;
+    font-size: 0.9rem;
+}
+.risk-high { background: var(--risk-high); color: white; }
+.risk-normal { background: var(--risk-low); color: white; }
+
+.details-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 24px;
+}
+
+.card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px;
+    box-shadow: var(--shadow);
+}
+
+.card h3 {
+    margin-bottom: 20px;
+    color: var(--primary);
+    font-size: 1.1rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.info-row {
+    margin-bottom: 16px;
+    border-bottom: 1px solid #f1f5f9;
+    padding-bottom: 8px;
+}
+.info-row:last-child { border-bottom: none; }
+
+.info-row label {
+    display: block;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+    text-transform: uppercase;
+}
+
+.info-row p { font-size: 1.1rem; font-weight: 500; }
+
+.doc-name { font-size: 1.2rem; font-weight: 600; margin-bottom: 20px; }
+
+.assign-form { display: flex; flex-direction: column; gap: 10px; }
+.select-wrapper select {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 1rem;
+    background-color: #fff;
+}
+
+.submit-btn {
+    background-color: var(--primary);
+    color: white;
+    border: none;
+    padding: 12px;
+    border-radius: 8px;
+    font-weight: 600;
     margin-top: 10px;
 }
+.submit-btn:hover { background-color: var(--primary-hover); }
 
-#top {
-    display: flex;
-    flex-direction: row;
-    justify-content: space-between;
-}
-
-select {
-    margin: 20px;
-    border-radius: 10px;
-    padding: 3px;
-}
-
-input, #home {
-    border: none;
-    border-radius: 10px;
-    padding: 5px;
-}
-
-input:hover, #home:hover {
-    background-color: yellowgreen;
+@media (max-width: 768px) {
+    .details-grid { grid-template-columns: 1fr; }
 }

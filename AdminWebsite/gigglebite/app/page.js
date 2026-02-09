@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useEffect, useState } from 'react';
 import { supabase } from './lib/supabaseClient';
 import "./styleHome.css";
 
@@ -19,16 +19,17 @@ export default function Home() {
     async function fetchAllData() {
         setLoading(true);
 
-        //get all patients
         const { data: pData } = await supabase
             .from('users')
-            .select('*')
+            .select('id, name, role, status, risk_level, assigned_doc')
             .eq('role', 'patient');
 
-        //get all doctors
         const { data: dData } = await supabase
             .from('users')
-            .select('*')
+            .select(`
+                id, name, role, assigned_doc,
+                doctor_profiles (specialization, department)
+            `)
             .eq('role', 'doctor');
 
         setPatients(pData || []);
@@ -36,122 +37,120 @@ export default function Home() {
         setLoading(false);
     }
 
-    //get the IDs of all doctors who have at least one patient
-    async function getAssignedDoctorIds() {
-        const { data } = await supabase
-            .from('users')
-            .select('assigned_doc')
-            .not('assigned_doc', 'is', null)
-            .neq('assigned_doc', 'Dr. Smit');       //ignore the placeholder for no assigned doctor
+    // Helper to check assignment
+    const isAssigned = (p) => p.assigned_doc && p.assigned_doc !== 'Dr. Smit' && p.assigned_doc !== null;
 
-        return [...new Set(data.map(item => item.assigned_doc))];
-    }
+    // Filter Logic
+    const filteredPatients = patients.filter(p => {
+        const assigned = isAssigned(p);
+        if (activePatientFilter === 'assigned') return assigned;
+        if (activePatientFilter === 'not-assigned') return !assigned;
+        return true;
+    });
 
-    //patient filters
-    async function patientsAll() {
-        setActivePatientFilter('all');
+    const filteredDoctors = doctors.filter(d => {
+        const hasPatients = patients.some(p => p.assigned_doc === d.id);
+        if (activeDoctorFilter === 'assigned') return hasPatients;
+        if (activeDoctorFilter === 'not-assigned') return !hasPatients;
+        return true;
+    });
 
-        const { data } = await supabase
-            .from('users')
-            .select('*')
-            .eq('role', 'patient');
-        setPatients(data);
-    }
+    // Stats Calculation
+    const highRiskCount = patients.filter(p => p.risk_level === 'High').length;
+    const availableDocs = doctors.length - doctors.filter(d => patients.some(p => p.assigned_doc === d.id)).length;
 
-    async function patientsAssigned() {
-        setActivePatientFilter('assigned');
-
-        const { data } = await supabase
-            .from('users')
-            .select('*')
-            .eq('role', 'patient')
-            .neq('assigned_doc', 'Dr. Smit');
-        setPatients(data);
-    }
-
-    async function patientsNotAssigned() {
-        setActivePatientFilter('not-assigned');
-
-        const { data } = await supabase
-            .from('users')
-            .select('*')
-            .eq('role', 'patient')
-            .eq('assigned_doc', 'Dr. Smit');
-        setPatients(data);
-    }
-
-    //doctor filters
-    async function doctorsAll() {
-        setActiveDoctorFilter('all');
-
-        const { data } = await supabase
-            .from('users')
-            .select('*')
-            .eq('role', 'doctor');
-        setDoctors(data);
-    }
-
-    async function doctorsAssigned() {
-        setActiveDoctorFilter('assigned');
-        const assignedIds = await getAssignedDoctorIds();
-
-        const { data } = await supabase
-            .from('users')
-            .select('*')
-            .eq('role', 'doctor')
-            .in('id', assignedIds);     //doctors whose IDs are in the assigned doctor list
-
-        setDoctors(data || []);
-    }
-
-    async function doctorsNotAssigned() {
-        setActiveDoctorFilter('not-assigned');
-        const assignedIds = await getAssignedDoctorIds();
-
-        const { data } = await supabase
-            .from('users')
-            .select('*')
-            .eq('role', 'doctor')
-            .not('id', 'in', `(${assignedIds.join(',')})`);     //doctors whose IDs are not in the assigned doctor list
-
-        setDoctors(data || []);
-    }
-
-    if (loading) return <div id="main">Take a break, have a KitKat!</div>;
+    if (loading) return <div className="loading-screen">Loading Dashboard...</div>;
 
     return (
         <div id="main">
-            <div id="bothColumns">
-
-                <div id="patients">
-                    <h2>Patients</h2>
-                    <div className="topButtons">
-                        <button className={activePatientFilter === 'all' ? 'active' : ''} onClick={patientsAll}>All</button>
-                        <button className={activePatientFilter === 'assigned' ? 'active' : ''} onClick={patientsAssigned}>Assigned</button>
-                        <button className={activePatientFilter === 'not-assigned' ? 'active' : ''} onClick={patientsNotAssigned}>Not Assigned</button>
+            <header className="dashboard-header">
+                <div>
+                    <h1>Medical Dashboard</h1>
+                    <p>Overview of hospital assignments and status.</p>
+                </div>
+                <div className="stats-row">
+                    <div className="stat-card">
+                        <span className="stat-val">{patients.length}</span>
+                        <span className="stat-label">Total Patients</span>
                     </div>
-                    <ul>
-                        {patients.map((p) => (
-                            <li key={p.id}>
-                                <Link href={`/patientDetails/${p.id}`}>{p.name}</Link>
-                            </li>
-                        ))}
+                    <div className="stat-card urgent">
+                        <span className="stat-val">{highRiskCount}</span>
+                        <span className="stat-label">High Risk</span>
+                    </div>
+                    <div className="stat-card">
+                        <span className="stat-val">{doctors.length}</span>
+                        <span className="stat-label">Doctors</span>
+                    </div>
+                </div>
+            </header>
+
+            <div id="bothColumns">
+                {/* Patients Column */}
+                <div className="panel" id="patients">
+                    <div className="panel-header">
+                        <h2>Patients</h2>
+                        <span className="count-badge">{filteredPatients.length}</span>
+                    </div>
+                    
+                    <div className="filter-tabs">
+                        <button className={activePatientFilter === 'all' ? 'active' : ''} onClick={() => setActivePatientFilter('all')}>All</button>
+                        <button className={activePatientFilter === 'assigned' ? 'active' : ''} onClick={() => setActivePatientFilter('assigned')}>Assigned</button>
+                        <button className={activePatientFilter === 'not-assigned' ? 'active' : ''} onClick={() => setActivePatientFilter('not-assigned')}>Unassigned</button>
+                    </div>
+
+                    <ul className="card-list">
+                        {filteredPatients.map((p) => {
+                            const isHighRisk = p.risk_level === 'High';
+                            const riskClass = isHighRisk ? 'badge-high' : (p.risk_level === 'Moderate' ? 'badge-mid' : 'badge-low');
+                            
+                            return (
+                                <li key={p.id} className="card-item">
+                                    <Link href={`/patientDetails/${p.id}`}>
+                                        <div className="card-row">
+                                            <strong>{p.name}</strong>
+                                            <span className={`badge ${riskClass}`}>{p.risk_level || 'Low'}</span>
+                                        </div>
+                                        <div className="card-row subtitle">
+                                            <span>Status: {p.status || 'Active'}</span>
+                                            {isAssigned(p) ? <span className="assigned-check">✓ Assigned</span> : <span className="unassigned-alert">⚠ Unassigned</span>}
+                                        </div>
+                                    </Link>
+                                </li>
+                            );
+                        })}
                     </ul>
                 </div>
 
-                <div id="doctors">
-                    <h2>Doctors</h2>
-                    <div className="topButtons">
-                        <button className={activeDoctorFilter === 'all' ? 'active' : ''} onClick={doctorsAll}>All</button>
-                        <button className={activeDoctorFilter === 'assigned' ? 'active' : ''} onClick={doctorsAssigned}>Assigned</button>
-                        <button className={activeDoctorFilter === 'not-assigned' ? 'active' : ''} onClick={doctorsNotAssigned}>Not Assigned</button>
+                {/* Doctors Column */}
+                <div className="panel" id="doctors">
+                    <div className="panel-header">
+                        <h2>Doctors</h2>
+                        <span className="count-badge">{filteredDoctors.length}</span>
                     </div>
-                    <ul>
-                        {doctors.map((d) => (
-                            <li key={d.id}>
-                                <Link href={`/doctorDetails/${d.id}`}>{d.name}</Link>
-                            </li>
-                        ))}
+
+                    <div className="filter-tabs">
+                        <button className={activeDoctorFilter === 'all' ? 'active' : ''} onClick={() => setActiveDoctorFilter('all')}>All</button>
+                        <button className={activeDoctorFilter === 'assigned' ? 'active' : ''} onClick={() => setActiveDoctorFilter('assigned')}>Active</button>
+                        <button className={activeDoctorFilter === 'not-assigned' ? 'active' : ''} onClick={() => setActiveDoctorFilter('not-assigned')}>Available</button>
+                    </div>
+
+                    <ul className="card-list">
+                        {filteredDoctors.map((d) => {
+                            const spec = d.doctor_profiles?.[0]?.specialization || 'General';
+                            return (
+                                <li key={d.id} className="card-item">
+                                    <Link href={`/doctorDetails/${d.id}`}>
+                                        <div className="card-row">
+                                            <strong>{d.name}</strong>
+                                        </div>
+                                        <div className="card-row subtitle">
+                                            <span>{spec}</span>
+                                            <span>Department: {d.doctor_profiles?.[0]?.department || 'General'}</span>
+                                        </div>
+                                    </Link>
+                                </li>
+                            );
+                        })}
                     </ul>
                 </div>
             </div>
