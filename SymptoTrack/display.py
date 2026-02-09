@@ -1,35 +1,53 @@
 def display_result(result):
     print("\nPATIENT RISK ASSESSMENT\n")
 
+    # ---- PAIN LEVEL ----
     print("PAIN LEVEL:")
-    print(f"Today: {result['pain_today']}")
-    print(f"Trend: {result['pain_trend']}\n")
+    pain_today = result.get("pain_today", "N/A")
+    pain_trend = result.get("pain_trend", "N/A")
+    print(f"Today: {pain_today}")
+    print(f"Trend: {pain_trend}\n")
 
+    # ---- CHECKLIST SYMPTOMS ----
     print("CHECKLIST SYMPTOMS:")
-    if result["checklist_symptoms"]:
-        for s in result["checklist_symptoms"]:
+    checklist = result.get("checklist_symptoms", [])
+    if checklist:
+        for s in checklist:
             print(s)
     else:
         print("None")
     print()
 
+    # ---- TRANSCRIPT ----
     print("TRANSCRIPT:")
-    print(result["transcript"])
+    print(result.get("transcript", "No transcript available"))
     print()
 
+    # ---- KEYWORDS ----
     print("EXTRACTED KEYWORDS:")
-    print(", ".join(result["keywords"]))
+    keywords = result.get("keywords", [])
+    print(", ".join(keywords) if keywords else "None")
     print()
 
+    # ---- RISK FACTORS ----
     print("DETECTED SYMPTOMS USED FOR RISK:")
-    for exp in result["xai_explanation"]:
-        print(f"🔴 High-risk: {exp}")
+    xai_explanation = result.get("xai_explanation", [])
+    if xai_explanation:
+        for exp in xai_explanation:
+            print(f"🔴 High-risk: {exp}")
+    else:
+        print("None")
     print()
 
+    # ---- RISK LEVEL ----
     print("RISK LEVEL:")
-    print(result["risk_level"])
+    print(result.get("risk_level", "UNKNOWN"))
     print()
 
+    # ---- XAI DETAILS ----
     print("XAI EXPLANATION:")
-    for i, exp in enumerate(result["xai_explanation"], start=1):
-        print(f"{i}. {exp}")
+    if xai_explanation:
+        for i, exp in enumerate(xai_explanation, start=1):
+            print(f"{i}. {exp}")
+    else:
+        print("No explanation available")
