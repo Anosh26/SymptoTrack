@@ -30,8 +30,12 @@ export function PatientDetail({ patient, onBack, onBookAppointment }: Props) {
   // Handle Android back button
   useEffect(() => {
     const backAction = () => {
-      onBack();
-      return true; // Prevent default behavior (closing app)
+      if (inVideoCall) {
+        setInVideoCall(false); // Close video call modal only
+        return true;
+      }
+      onBack(); // Navigate back to dashboard
+      return true;
     };
 
     const backHandler = BackHandler.addEventListener(
@@ -40,7 +44,7 @@ export function PatientDetail({ patient, onBack, onBookAppointment }: Props) {
     );
 
     return () => backHandler.remove();
-  }, [onBack]);
+  }, [inVideoCall, onBack]);
 
   // Cleanup sound on unmount
   useEffect(() => {
@@ -82,12 +86,15 @@ export function PatientDetail({ patient, onBack, onBookAppointment }: Props) {
     }
   };
   
+  // Get recent 7 days for chart (most recent first, then reverse for chronological order)
+  const recentCheckIns = [...patient.checkIns].slice(-7).reverse();
+  
   const chartData = {
-    labels: patient.checkIns.map(checkIn => 
+    labels: recentCheckIns.map(checkIn => 
       new Date(checkIn.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
     ),
     datasets: [{
-      data: patient.checkIns.map(checkIn => checkIn.painLevel)
+      data: recentCheckIns.map(checkIn => checkIn.painLevel)
     }]
   };
 

@@ -1,6 +1,7 @@
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, BackHandler} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import type { Appointment, Patient } from '../App';
+import { useEffect } from "react";
 
 type Props = {
   patient: Patient;
@@ -10,6 +11,21 @@ type Props = {
 
 export function AppointmentsList({ patient, onBack, onBookNew }: Props) {
   const appointments = patient.appointments || [];
+
+  // Handle Android back button
+  useEffect(() => {
+    const backAction = () => {
+      onBack();
+      return true; // Prevent default behavior
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      backAction
+    );
+
+    return () => backHandler.remove();
+  }, [onBack]);
 
   const getStatusColor = (status: Appointment['status']) => {
     switch (status) {

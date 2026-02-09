@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   View, 
   Text, 
@@ -11,7 +11,10 @@ import {
 } from 'react-native';
 import Slider from '@react-native-community/slider';
 import { Ionicons } from '@expo/vector-icons';
-import { Audio } from 'expo-av';
+import {
+  ExpoSpeechRecognitionModule,
+  useSpeechRecognitionEvent,
+} from "expo-speech-recognition";
 import type { Patient, CheckIn } from '../App';
 
 type Props = {
@@ -34,17 +37,46 @@ const symptomOptions = [
 ];
 
 export function CaregiverCheckin({ patient, onSubmit, onViewHistory, onViewAppointments, onBookAppointment }: Props) {
-  const [painLevel, setPainLevel] = useState(1); // Changed from 4 to 1 (minimum allowed)
+  const [painLevel, setPainLevel] = useState(1);
   const [selectedSymptoms, setSelectedSymptoms] = useState<string[]>([]);
   const [voiceNote, setVoiceNote] = useState('');
   const [isRecording, setIsRecording] = useState(false);
   const [submitted, setSubmitted] = useState(false);
-  const [recordingUri, setRecordingUri] = useState<string | null>(null);
-  const [recordingDuration, setRecordingDuration] = useState(0);
-  
-  const recordingRef = useRef<Audio.Recording | null>(null);
-  const soundRef = useRef<Audio.Sound | null>(null);
-  const durationIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [recognizing, setRecognizing] = useState(false);
+
+  // Check if speech recognition is available
+  useEffect(() => {
+    const checkAvailability = async () => {
+      const result = await ExpoSpeechRecognitionModule.getStateAsync();
+      if (result.state === "unavailable") {
+        Alert.alert(
+          "Speech Recognition Unavailable",
+          "Speech recognition is not available on this device"
+        );
+      }
+    };
+    checkAvailability();
+  }, []);
+
+  // Handle speech recognition events
+  useSpeechRecognitionEvent("start", () => {
+    setRecognizing(true);
+  });
+
+  useSpeechRecognitionEvent("end", () => {
+    setRecognizing(false);
+  });
+
+  useSpeechRecognitionEvent("result", (event) => {
+    const transcripts = event.results.map((result) => result.transcript);
+    setVoiceNote(transcripts.join(" "));
+  });
+
+  useSpeechRecognitionEvent("error", (event) => {
+    console.error("Speech recognition error:", event.error);
+    Alert.alert("Error", `Speech recognition failed: ${event.error}`);
+    setRecognizing(false);
+  });
 
   const toggleSymptom = (symptom: string) => {
     setSelectedSymptoms(prev =>
@@ -56,63 +88,33 @@ export function CaregiverCheckin({ patient, onSubmit, onViewHistory, onViewAppoi
 
   const startRecording = async () => {
     try {
-      const permission = await Audio.requestPermissionsAsync();
-      
-      if (permission.status !== 'granted') {
-        Alert.alert('Permission Required', 'Please grant microphone permission to record audio');
+      const result = await ExpoSpeechRecognitionModule.requestPermissionsAsync();
+      if (!result.granted) {
+        Alert.alert("Permission Required", "Please grant microphone permission");
         return;
       }
 
-      await Audio.setAudioModeAsync({
-        allowsRecordingIOS: true,
-        playsInSilentModeIOS: true,
+      await ExpoSpeechRecognitionModule.start({
+        lang: "en-US",
+        interimResults: true,
+        maxAlternatives: 1,
+        continuous: false,
+        requiresOnDeviceRecognition: false,
+        addsPunctuation: true,
+        contextualStrings: ["pain", "symptoms", "feeling", "recovery"],
       });
-
-      const { recording } = await Audio.Recording.createAsync(
-        Audio.RecordingOptionsPresets.HIGH_QUALITY
-      );
       
-      recordingRef.current = recording;
       setIsRecording(true);
-      setRecordingDuration(0);
-
-      durationIntervalRef.current = setInterval(() => {
-        setRecordingDuration(prev => {
-          if (prev >= 9) {
-            stopRecording();
-            return 10;
-          }
-          return prev + 1;
-        });
-      }, 1000);
-
     } catch (err) {
       console.error('Failed to start recording', err);
-      Alert.alert('Error', 'Failed to start recording');
+      Alert.alert('Error', 'Failed to start voice recording');
     }
   };
 
   const stopRecording = async () => {
-    if (!recordingRef.current) return;
-
     try {
+      await ExpoSpeechRecognitionModule.stop();
       setIsRecording(false);
-      
-      if (durationIntervalRef.current) {
-        clearInterval(durationIntervalRef.current);
-        durationIntervalRef.current = null;
-      }
-
-      await recordingRef.current.stopAndUnloadAsync();
-      await Audio.setAudioModeAsync({
-        allowsRecordingIOS: false,
-      });
-
-      const uri = recordingRef.current.getURI();
-      setRecordingUri(uri);
-      recordingRef.current = null;
-
-      Alert.alert('Recording Complete', 'Voice note recorded successfully!');
     } catch (err) {
       console.error('Failed to stop recording', err);
       Alert.alert('Error', 'Failed to stop recording');
@@ -127,65 +129,27 @@ export function CaregiverCheckin({ patient, onSubmit, onViewHistory, onViewAppoi
     }
   };
 
-  const playRecording = async () => {
-    if (!recordingUri) {
-      Alert.alert('No Recording', 'Please record a voice note first');
-      return;
-    }
-
-    try {
-      if (soundRef.current) {
-        await soundRef.current.unloadAsync();
-        soundRef.current = null;
-      }
-
-      const { sound } = await Audio.Sound.createAsync(
-        { uri: recordingUri },
-        { shouldPlay: true }
-      );
-      
-      soundRef.current = sound;
-
-      sound.setOnPlaybackStatusUpdate((status) => {
-        if (status.isLoaded && status.didJustFinish) {
-          sound.unloadAsync();
-          soundRef.current = null;
-        }
-      });
-
-    } catch (err) {
-      console.error('Failed to play recording', err);
-      Alert.alert('Error', 'Failed to play recording');
-    }
-  };
-
-  const deleteRecording = () => {
-    setRecordingUri(null);
-    setRecordingDuration(0);
+  const clearRecording = () => {
     setVoiceNote('');
   };
 
   const handleSubmit = () => {
     const today = new Date().toISOString().split('T')[0];
     
-    // Don't include recordingUri in the data sent to database
     onSubmit({
       date: today,
       painLevel,
       symptoms: selectedSymptoms,
-      voiceNote: voiceNote || (recordingUri ? `[Voice Recording: ${recordingDuration}s]` : ''),
-      voiceTranscript: voiceNote
-      // recordingUri is intentionally NOT included here
+      voiceNote: voiceNote || '',
+      voiceTranscript: voiceNote || ''
     });
 
     setSubmitted(true);
     setTimeout(() => {
       setSubmitted(false);
-      setPainLevel(1); // Reset to 1 instead of 4
+      setPainLevel(1);
       setSelectedSymptoms([]);
       setVoiceNote('');
-      setRecordingUri(null);
-      setRecordingDuration(0);
     }, 2000);
   };
 
@@ -322,60 +286,48 @@ export function CaregiverCheckin({ patient, onSubmit, onViewHistory, onViewAppoi
             </View>
           </View>
 
-          {/* Voice Note */}
+          {/* Voice Note with Speech-to-Text */}
           <View style={styles.card}>
             <Text style={styles.label}>
               Voice Note{' '}
-              <Text style={styles.labelOptional}>(optional, 10 seconds)</Text>
+              <Text style={styles.labelOptional}>(optional)</Text>
             </Text>
 
-            {recordingUri ? (
-              <View style={styles.recordedContainer}>
-                <View style={styles.recordedInfo}>
-                  <Ionicons name="mic" size={24} color="#10b981" />
-                  <Text style={styles.recordedText}>
-                    Recording saved ({recordingDuration}s)
-                  </Text>
-                </View>
-                <View style={styles.recordedActions}>
-                  <TouchableOpacity
-                    onPress={playRecording}
-                    style={styles.playButton}
-                  >
-                    <Ionicons name="play" size={20} color="#2563eb" />
-                    <Text style={styles.playButtonText}>Play</Text>
+            <TouchableOpacity
+              onPress={toggleRecording}
+              style={[
+                styles.recordButton,
+                isRecording && styles.recordButtonActive
+              ]}
+              disabled={recognizing && !isRecording}
+            >
+              <Ionicons 
+                name={isRecording ? "stop-circle" : "mic-outline"} 
+                size={24} 
+                color={isRecording ? "#dc2626" : "#374151"} 
+              />
+              <Text style={[
+                styles.recordButtonText,
+                isRecording && styles.recordButtonTextActive
+              ]}>
+                {isRecording ? 'Tap to Stop Recording' : recognizing ? 'Processing...' : 'Tap to Start Voice Input'}
+              </Text>
+            </TouchableOpacity>
+
+            {voiceNote && (
+              <View style={styles.transcriptPreview}>
+                <View style={styles.transcriptHeader}>
+                  <Ionicons name="document-text" size={20} color="#10b981" />
+                  <Text style={styles.transcriptHeaderText}>Transcribed Text:</Text>
+                  <TouchableOpacity onPress={clearRecording}>
+                    <Ionicons name="close-circle" size={20} color="#dc2626" />
                   </TouchableOpacity>
-                  <TouchableOpacity
-                    onPress={deleteRecording}
-                    style={styles.deleteButton}
-                  >
-                    <Ionicons name="trash-outline" size={20} color="#dc2626" />
-                  </TouchableOpacity>
                 </View>
+                <Text style={styles.transcriptText}>{voiceNote}</Text>
               </View>
-            ) : (
-              <TouchableOpacity
-                onPress={toggleRecording}
-                style={[
-                  styles.recordButton,
-                  isRecording && styles.recordButtonActive
-                ]}
-              >
-                <Ionicons 
-                  name={isRecording ? "stop-circle" : "mic-outline"} 
-                  size={24} 
-                  color={isRecording ? "#dc2626" : "#374151"} 
-                />
-                <Text style={[
-                  styles.recordButtonText,
-                  isRecording && styles.recordButtonTextActive
-                ]}>
-                  {isRecording ? `Recording... ${recordingDuration}s / 10s` : 'Tap to Record'}
-                </Text>
-              </TouchableOpacity>
             )}
 
-            <Text style={styles.voiceNoteHelper}>Or type what you would say:</Text>
+            <Text style={styles.voiceNoteHelper}>Or type manually:</Text>
             <TextInput
               value={voiceNote}
               onChangeText={setVoiceNote}
@@ -624,6 +576,31 @@ const styles = StyleSheet.create({
   recordButtonTextActive: {
     color: '#dc2626',
   },
+  transcriptPreview: {
+    backgroundColor: '#f0fdf4',
+    borderWidth: 1,
+    borderColor: '#86efac',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 12,
+  },
+  transcriptHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 8,
+  },
+  transcriptHeaderText: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#166534',
+  },
+  transcriptText: {
+    fontSize: 14,
+    color: '#374151',
+    lineHeight: 20,
+  },
   voiceNoteHelper: {
     fontSize: 12,
     color: '#9ca3af',
@@ -668,52 +645,5 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#1e40af',
     lineHeight: 20,
-  },
-  recordedContainer: {
-    backgroundColor: '#f0fdf4',
-    borderWidth: 1,
-    borderColor: '#86efac',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 12,
-  },
-  recordedInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    marginBottom: 12,
-  },
-  recordedText: {
-    flex: 1,
-    fontSize: 14,
-    color: '#166534',
-    fontWeight: '500',
-  },
-  recordedActions: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  playButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    backgroundColor: '#eff6ff',
-    padding: 10,
-    borderRadius: 6,
-  },
-  playButtonText: {
-    color: '#2563eb',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  deleteButton: {
-    width: 44,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#fef2f2',
-    padding: 10,
-    borderRadius: 6,
   },
 });
