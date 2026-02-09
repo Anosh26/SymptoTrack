@@ -1,69 +1,64 @@
-import { useColorScheme } from '@/hooks/use-color-scheme';
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
-import { Stack, useRouter, useSegments } from 'expo-router'; 
-import * as SecureStore from 'expo-secure-store';
-import { ClerkProvider, ClerkLoaded, useAuth } from '@clerk/clerk-expo'; // Import useAuth
+import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect } from 'react'; 
+import { useEffect, useState } from 'react';
+import { View, ActivityIndicator } from 'react-native';
 import 'react-native-reanimated';
 
-const tokenCache = {
-  async getToken(key: string) {
-    try {
-      return SecureStore.getItemAsync(key);
-    } catch (err) {
-      return null;
-    }
-  },
-  async saveToken(key: string, value: string) {
-    try {
-      return SecureStore.setItemAsync(key, value);
-    } catch (err) {
-      return;
-    }
-  },
-};
+import { useColorScheme } from '@/hooks/use-color-scheme';
+import { supabase } from '../lib/supabase'; // Ensure this file exists from previous steps
+import { Session } from '@supabase/supabase-js';
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
-
-  return (
-    <ClerkProvider 
-      publishableKey="pk_test_cG9wdWxhci1lbGYtNDEuY2xlcmsuYWNjb3VudHMuZGV2JA" 
-      tokenCache={tokenCache}
-    >
-      <ClerkLoaded>
-        <RootLayoutNav colorScheme={colorScheme} />
-      </ClerkLoaded>
-    </ClerkProvider>
-  );
-}
-
-function RootLayoutNav({ colorScheme }: { colorScheme: any }) {
-  const { isLoaded, isSignedIn } = useAuth(); // Use Clerk's real state
+  const [session, setSession] = useState<Session | null>(null);
+  const [initialized, setInitialized] = useState(false);
   const segments = useSegments();
   const router = useRouter();
 
   useEffect(() => {
-    if (!isLoaded) return;
+    // 1. Check active session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setInitialized(true);
+    });
 
-    const inTabsGroup = segments[0] === '(tabs)';
+    // 2. Listen for changes (login/logout)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+    });
 
-    if (isSignedIn && !inTabsGroup) {
-      // If logged in, go to tabs
+    return () => subscription.unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    if (!initialized) return;
+
+    const inAuthGroup = segments[0] === '(tabs)';
+    
+    if (session && !inAuthGroup) {
+      // User is signed in, redirect to home
       router.replace('/(tabs)');
-    } else if (!isSignedIn) {
-      // If not logged in, go to login
+    } else if (!session && inAuthGroup) {
+      // User is not signed in, redirect to login
       router.replace('/login');
     }
-  }, [isSignedIn, isLoaded]); // Removed segments to avoid loops
+  }, [session, initialized, segments]);
+
+  if (!initialized) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" />
+      </View>
+    );
+  }
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       <Stack>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="login" options={{ headerShown: false }} />
-        <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
+        <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
       </Stack>
       <StatusBar style="auto" />
     </ThemeProvider>
