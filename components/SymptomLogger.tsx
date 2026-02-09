@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from "react";
-import { View, Text, Button, TextInput, StyleSheet, ScrollView, Alert } from "react-native"; 
-import { supabase } from "../lib/supabase"; 
+import React, { useEffect, useState } from "react";
+import { Alert, Button, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { supabase } from "../lib/supabase";
 
 export default function SymptomLogger() {
   const [symptomText, setSymptomText] = useState("");
@@ -38,7 +38,7 @@ export default function SymptomLogger() {
       .insert({
         user_id: userId, // Uses the Supabase User ID
         description: symptomText,
-        severity: 5,
+        painlvl: 5,
       });
 
     if (!error) {
