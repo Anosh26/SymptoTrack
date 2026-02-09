@@ -5,6 +5,7 @@ import { AppointmentsList } from "./components/AppointmentsList";
 import { CaregiverCheckin } from "./components/CaregiverCheckin";
 import { PatientDetail } from "./components/PatientDetail";
 import { supabase, SymptomRecord, AppointmentRecord, UserRecord, PatientProfileRecord, DoctorProfileRecord } from "./lib/supabase";
+import { useRouter } from 'expo-router';
 
 export type CheckIn = {
   id: string;
@@ -77,11 +78,70 @@ export default function App() {
   const [showAppointments, setShowAppointments] = useState(false);
   const [showAppointmentModal, setShowAppointmentModal] = useState(false);
   const [loading, setLoading] = useState(true);
+  const router = useRouter(); // Initialize the router
 
   // Load check-ins and appointments from Supabase on mount
   useEffect(() => {
+    // 1. Initial Data Load
     loadData();
-  }, []);
+
+    // 2. Realtime Listener
+    console.log("🔴 Setting up Realtime Listener...");
+    
+    const channel = supabase
+      .channel('appointments-tracking')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE', 
+          schema: 'public',
+          table: 'appointments',
+          filter: `patient_id=eq.${STATIC_USER_ID}`, 
+        },
+        (payload) => {
+          // ✅ FIX: Cast payload.new to 'AppointmentRecord' so TypeScript knows it has a 'status' property
+          const newRecord = payload.new as AppointmentRecord;
+          
+          console.log("🟢 Update received. New Status:", newRecord.status);
+
+          // Check if status is IN_PROGRESS (or whatever your doctor app sends)
+          if (newRecord.status === 'IN_PROGRESS') {
+            Alert.alert(
+              'Incoming Consultation',
+              'Your doctor is starting the video call.',
+              [
+                { 
+                  text: 'Join Now', 
+                  onPress: () => {
+                    // Safety check: ensure router exists before pushing
+                    if (router) {
+                      router.push({
+                        pathname: "/consultation",
+                        params: {
+                          roomId: newRecord.id, // Using Appointment ID as Room ID
+                          patientName: patient.name
+                        }
+                      });
+                    } else {
+                      console.error("Router is not mounted. Cannot navigate.");
+                      // Fallback: If you are using manual state navigation in App.tsx, 
+                      // you might need a setShowConsultation(true) state here instead.
+                    }
+                  } 
+                },
+                { text: 'Cancel', style: 'cancel' }
+              ]
+            );
+          }
+        }
+      )
+      .subscribe();
+
+    // Cleanup
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []); // Empty dependency array ensures this runs once on mount
 
   const loadData = async () => {
     setLoading(true);
@@ -488,7 +548,7 @@ const styles = StyleSheet.create({
     color: "#fff",
     marginBottom: 4
   },
-  appTagline: {
+  appTagline: { 
     fontSize: 14,
     color: "#bfdbfe"
   },

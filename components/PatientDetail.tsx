@@ -206,19 +206,12 @@ export function PatientDetail({ patient, onBack, onBookAppointment }: Props) {
           </View>
           
           <View style={styles.buttonsRow}>
-            <TouchableOpacity 
-              onPress={handleStartVideoCall}
-              style={styles.videoButton}>
-              <Ionicons name="videocam" size={20} color="#fff" />
-              <Text style={styles.videoButtonText}>Start Video Call</Text>
-            </TouchableOpacity>
-
             {onBookAppointment && (
               <TouchableOpacity 
                 onPress={onBookAppointment}
-                style={styles.appointmentButtonSmall}>
+                style={styles.appointmentButton}>
                 <Ionicons name="calendar" size={20} color="#8b5cf6" />
-                <Text style={styles.appointmentButtonSmallText}>Book Appointment</Text>
+                <Text style={styles.appointmentButtonText}>Book Appointment</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -476,22 +469,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 8,
   },
-  videoButton: {
+  appointmentButton: {
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    backgroundColor: '#2563eb',
-    padding: 12,
-    borderRadius: 8,
-  },
-  videoButtonText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  appointmentButtonSmall: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -503,7 +482,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#c4b5fd',
   },
-  appointmentButtonSmallText: {
+  appointmentButtonText: {
     color: '#8b5cf6',
     fontSize: 14,
     fontWeight: '600',
