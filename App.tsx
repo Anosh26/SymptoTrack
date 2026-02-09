@@ -4,7 +4,7 @@ import { AppointmentModal } from "./components/AppointmentModal";
 import { AppointmentsList } from "./components/AppointmentsList";
 import { CaregiverCheckin } from "./components/CaregiverCheckin";
 import { PatientDetail } from "./components/PatientDetail";
-import { supabase, SymptomRecord, AppointmentRecord } from "./lib/supabase";
+import { supabase, SymptomRecord, AppointmentRecord, UserRecord, PatientProfileRecord, DoctorProfileRecord } from "./lib/supabase";
 
 export type CheckIn = {
   id: string;
@@ -52,20 +52,20 @@ export type Patient = {
   appointments?: Appointment[];
 };
 
-// Mock patient data - keeping static for now
-const STATIC_USER_ID = "6f209238-27e9-464e-881d-67b59b993a53"; // Replace with one of your actual user IDs
-const STATIC_DOCTOR_ID = "f1f155f1-44bc-4e02-938e-45195850c2af"; // Shreyash - doctor from users table
+// User IDs
+const STATIC_USER_ID = "11111111-1111-1111-1111-111111111111"; // Patient user ID
+const STATIC_DOCTOR_ID = "f1f155f1-44bc-4e02-938e-45195850c2af"; // Doctor user ID
 
 const mockPatient: Patient = {
   id: STATIC_USER_ID,
-  name: "Sarah Johnson",
-  age: 68,
-  condition: "Post-surgery recovery",
+  name: "Loading...",
+  age: 0,
+  condition: "Loading...",
   currentRiskLevel: "low",
   assignedDoctor: {
     id: STATIC_DOCTOR_ID,
-    name: "Dr. Emily Carter",
-    specialty: "Post-operative Care"
+    name: "Loading...",
+    specialty: "Loading..."
   },
   checkIns: [],
   appointments: []
@@ -86,14 +86,102 @@ export default function App() {
   const loadData = async () => {
     setLoading(true);
     await Promise.all([
+      loadPatientData(),
+      loadDoctorData(),
       loadCheckIns(),
       loadAppointments()
     ]);
     setLoading(false);
   };
 
+  const loadPatientData = async () => {
+    try {
+      // Fetch user data
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select<'*', UserRecord>('*')
+        .eq('id', STATIC_USER_ID)
+        .single();
+
+      if (userError) {
+        console.error('Error loading user data:', userError);
+        return;
+      }
+
+      // Fetch patient profile data
+      const { data: profileData, error: profileError } = await supabase
+        .from('patient_profiles')
+        .select<'*', PatientProfileRecord>('*')
+        .eq('user_id', STATIC_USER_ID)
+        .single();
+
+      if (profileError) {
+        console.error('Error loading patient profile:', profileError);
+      }
+
+      // Use patient_profiles data if available, otherwise fall back to users table
+      const patientAge = profileData?.age || userData.age || 0;
+      const patientCondition = profileData?.condition || userData.condition || 'General';
+      const riskLevel = profileData?.risk_level || userData.risk_level || 'Low';
+
+      setPatient(prev => ({
+        ...prev,
+        name: userData.name,
+        age: patientAge,
+        condition: patientCondition,
+        currentRiskLevel: riskLevel.toLowerCase() as 'low' | 'medium' | 'high'
+      }));
+    } catch (err) {
+      console.error('Unexpected error loading patient data:', err);
+      Alert.alert('Error', 'Failed to load patient information');
+    }
+  };
+
+  const loadDoctorData = async () => {
+    try {
+      // Fetch doctor user data
+      const { data: doctorUser, error: doctorUserError } = await supabase
+        .from('users')
+        .select<'*', UserRecord>('*')
+        .eq('id', STATIC_DOCTOR_ID)
+        .single();
+
+      if (doctorUserError) {
+        console.error('Error loading doctor user data:', doctorUserError);
+        return;
+      }
+
+      // Fetch doctor profile data (optional - may not exist)
+      const { data: doctorProfile, error: doctorProfileError } = await supabase
+        .from('doctor_profiles')
+        .select<'*', DoctorProfileRecord>('*')
+        .eq('user_id', STATIC_DOCTOR_ID)
+        .maybeSingle(); // Use maybeSingle() instead of single() to allow null
+
+      // Don't log error if profile doesn't exist
+      if (doctorProfileError && doctorProfileError.code !== 'PGRST116') {
+        console.error('Error loading doctor profile:', doctorProfileError);
+      }
+
+      const specialty = doctorProfile?.specialization || 'General Practice';
+
+      setPatient(prev => ({
+        ...prev,
+        assignedDoctor: {
+          id: STATIC_DOCTOR_ID,
+          name: doctorUser.name,
+          specialty: specialty
+        }
+      }));
+    } catch (err) {
+      console.error('Unexpected error loading doctor data:', err);
+    }
+  };
+
   const loadCheckIns = async () => {
     try {
+      console.log('Loading check-ins for user:', STATIC_USER_ID);
+      
       const { data, error } = await supabase
         .from('symptoms')
         .select<'*', SymptomRecord>('*')
@@ -105,6 +193,8 @@ export default function App() {
         Alert.alert('Error', 'Failed to load check-in history');
         return;
       }
+
+      console.log('Check-ins loaded:', data?.length || 0, 'records');
 
       // Convert Supabase data to CheckIn format
       const checkIns: CheckIn[] = (data || []).map(record => ({
@@ -181,7 +271,7 @@ export default function App() {
 
   const calculateRiskLevel = (painLevel: number): 'low' | 'medium' | 'high' => {
     if (painLevel >= 7) return 'high';
-    if (painLevel >= 5) return 'medium';
+    if (painLevel >= 4) return 'medium'; // Changed from 5 to 4 to better match pain scale
     return 'low';
   };
 

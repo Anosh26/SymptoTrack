@@ -24,7 +24,7 @@ type Props = {
 export function PatientDetail({ patient, onBack, onBookAppointment }: Props) {
   const [inVideoCall, setInVideoCall] = useState(false);
   const [playingId, setPlayingId] = useState<string | null>(null);
-  const latestCheckIn = patient.checkIns[patient.checkIns.length - 1];
+  const latestCheckIn = patient.checkIns.length > 0 ? patient.checkIns[patient.checkIns.length - 1] : null;
   const soundRef = useRef<Audio.Sound | null>(null);
   
   // Handle Android back button
@@ -99,12 +99,15 @@ export function PatientDetail({ patient, onBack, onBookAppointment }: Props) {
   };
 
   const getRiskColor = (level: 'low' | 'medium' | 'high') => {
-    switch (level) {
+    const normalizedLevel = level.toLowerCase();
+    switch (normalizedLevel) {
       case 'high':
         return { bg: '#fee2e2', text: '#991b1b', border: '#fca5a5' };
       case 'medium':
+      case 'moderate': // Handle 'moderate' as well
         return { bg: '#fef3c7', text: '#92400e', border: '#fcd34d' };
       case 'low':
+      default:
         return { bg: '#d1fae5', text: '#065f46', border: '#6ee7b7' };
     }
   };
@@ -222,7 +225,7 @@ export function PatientDetail({ patient, onBack, onBookAppointment }: Props) {
         </View>
 
         {/* Risk Alert Explanation */}
-        {patient.currentRiskLevel !== 'low' && latestCheckIn.riskExplanation && (
+        {latestCheckIn && patient.currentRiskLevel !== 'low' && latestCheckIn.riskExplanation && (
           <View style={styles.alertCard}>
             <View style={styles.alertHeader}>
               <Ionicons name="alert-circle" size={24} color="#dc2626" />
