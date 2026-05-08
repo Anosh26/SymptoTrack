@@ -1,50 +1,60 @@
-# Welcome to your Expo app 👋
+# SymptoTrack - Patient App
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+SymptoTrack Patient is a mobile application designed to empower patients in managing their health journey. It provides tools for audio-based symptom tracking, real-time medical consultations, and comprehensive health data visualization.
 
-## Get started
+## Key Features
 
-1. Install dependencies
+- **Audio Symptom Logging**: Record voice notes about your symptoms, which are automatically processed for transcription and analysis.
+- **Real-time Consultations**: Connect with healthcare professionals instantly via integrated LiveKit audio/video sessions.
+- **Health Insights**: Visualize your symptom trends and health metrics through interactive charts.
+- **Secure Sync**: Your data is securely synchronized and stored using Supabase.
+- **Speech Recognition**: On-device and cloud-based speech-to-text for seamless logging.
 
+---
+
+## Project Structure
+
+```text
+SymptoTrack/
+├── app/                # File-based routing (Expo Router)
+├── assets/             # App icons, splash screens, and images
+├── components/         # Reusable UI components (Buttons, Cards, etc.)
+├── constants/          # Theme colors and configuration constants
+├── hooks/              # Custom React hooks for logic and state
+├── lib/                # Third-party service initializations (Supabase, LiveKit)
+└── App.tsx             # Root application component
+```
+
+---
+
+## Getting Started
+
+### Prerequisites
+- [Node.js](https://nodejs.org/) (Latest LTS)
+- [Expo Go](https://expo.dev/go) on your mobile device (for testing)
+
+### Installation
+1. Clone the repository and navigate to the root directory.
+2. Install dependencies:
    ```bash
    npm install
    ```
 
-2. Start the app
-
-   ```bash
-   npx expo start
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
-
+### Running the App
+Start the development server:
 ```bash
-npm run reset-project
+npx expo start
 ```
+- Scan the QR code with **Expo Go** (Android) or the **Camera app** (iOS).
+- Press `a` for Android Emulator or `i` for iOS Simulator.
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+---
 
-## Learn more
+## Technology Stack
+- **Framework**: React Native with Expo
+- **Real-time Communication**: LiveKit
+- **Database & Auth**: Supabase
+- **Audio/Speech**: Expo AV & Expo Speech Recognition
+- **Data Visualization**: React Native Chart Kit
+- **Language**: TypeScript
 
-To learn more about developing your project with Expo, look at the following resources:
-
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
