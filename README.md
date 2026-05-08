@@ -1,50 +1,83 @@
-# Welcome to your Expo app 👋
+# SymptoTrack - AI-Powered Symptom Tracking & Analysis 
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+**SymptoTrack** is an end-to-end intelligent healthcare solution designed to optimize patient symptom monitoring through audio analysis. By combining mobile technology, machine learning, and explainable AI, the platform enables precise symptom detection and actionable insights for both patients and healthcare providers.
 
-## Get started
+##  Overview
 
-1. Install dependencies
+The SymptoTrack ecosystem consists of three primary components:
 
-   ```bash
-   npm install
-   ```
+1.  **Mobile App (Patient)**: A React Native (Expo) application for patients to record symptoms, view history, and receive AI-driven insights.
+2.  **ML Pipeline (Core Engine)**: A Python-based processing hub that performs audio transcription, symptom prediction, and generates XAI explanations.
+3.  **Admin Dashboard (Provider)**: A Next.js web portal for healthcare professionals to monitor patient data and manage the platform.
 
-2. Start the app
+---
 
-   ```bash
-   npx expo start
-   ```
+##  Project Structure
 
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
-
-```bash
-npm run reset-project
+```text
+SymptoTrack/
+├── app/                # Mobile App (Expo Router)
+├── assets/             # Shared App Assets
+├── components/         # Mobile UI Components
+├── SymptoTrack/        # ML Pipeline (Python)
+│   ├── model/          # Pre-trained ML weights
+│   └── process_queue.py# Audio processing logic
+└── AdminWebsite/       # Admin Dashboard
+    └── gigglebite/     # Next.js & Supabase application
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+---
 
-## Learn more
+##  Key Features
 
-To learn more about developing your project with Expo, look at the following resources:
+- **Real-time Audio Analysis**: Automated transcription of patient voice notes.
+- **AI Symptom Prediction**: High-accuracy models for identifying potential medical conditions.
+- **Explainable AI (XAI)**: Visual explanations of model logic to build clinical trust.
+- **Provider Dashboard**: Centralized view for managing patient records and monitoring trends.
+- **Secure Data Sync**: End-to-end synchronization with Supabase integration.
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+---
 
-## Join the community
+##  Technology Stack
 
-Join our community of developers creating universal apps.
+### Mobile & Frontend
+- **Framework**: React Native, Expo, Next.js
+- **State Management**: React Hooks & Context API
+- **Icons**: Expo Vector Icons & Lucide React
+- **Styling**: Vanilla CSS & React Native StyleSheets
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+### Backend & Machine Learning
+- **ML Logic**: Python, Scikit-learn
+- **XAI Integration**: SHAP / LIME
+- **Database**: Supabase (PostgreSQL)
+- **Authentication**: Supabase Auth & Google Sign-In
+
+---
+
+##  Getting Started
+
+### 1. Mobile Application (Root)
+```bash
+npm install
+npx expo start
+```
+
+### 2. ML Pipeline (`/SymptoTrack`)
+```bash
+cd SymptoTrack
+pip install -r requirements.txt
+```
+
+### 3. Admin Dashboard (`/AdminWebsite/gigglebite`)
+```bash
+cd AdminWebsite/gigglebite
+npm install
+npm run dev
+```
+
+---
+
+##  License
+
+This project is licensed under the MIT License.
+
